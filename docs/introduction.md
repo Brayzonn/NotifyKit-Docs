@@ -6,20 +6,43 @@ sidebar_position: 1
 
 Welcome to NotifyHub - a simple, affordable notification infrastructure for developers.
 
-## What is NotifyHub?
+### What is NotifyHub?
 
-NotifyHub provides reliable email and webhook delivery with queue management, domain verification, and a powerful TypeScript SDK. Built as an affordable alternative to services like Knock and Courier.
+NotifyHub offers production-ready notification infrastructure while removing the operational overhead from your application.
 
-## Key Features
+Most teams start with an email provider and a background queue. Over time, that grows into retries, deduplication, delivery logs, dead-letter queues, domain setup, and on-call maintenance.
 
-- **Email Delivery** - Send emails via SendGrid with custom domains
-- **Webhook Notifications** - Reliable webhook delivery with retries
-- **Queue Management** - Built on Bull/BullMQ with Redis
-- **Domain Verification** - Verify custom domains for email sending
-- **TypeScript SDK** - Type-safe client library
-- **Developer-Friendly** - Clean API and extensive documentation
+NotifyHub handles these concerns behind a simple, type-safe API, so notifications don't become a system you have to manage.
 
-## Quick Example
+It's a focused, affordable alternative for developers who find full-featured platforms to be overkill for their use case.
+
+### What NotifyHub Does for You
+
+NotifyHub takes ownership of the hard parts of notification delivery:
+
+- Reliable background processing and retries
+- Safe, idempotent delivery (no accidental double sends)
+- Auditable delivery logs
+- Domain verification and email best practices
+- Predictable, simple pricing
+
+You make an API call. NotifyHub handles the rest.
+
+### Key Features
+
+**Email Delivery** — Send emails via SendGrid with custom domain support
+
+**Webhook Notifications** — Reliable webhook delivery with automatic retries
+
+**Queue Management** — Built on Bull/BullMQ with Redis for reliability
+
+**Domain Verification** — Verify custom domains for professional email sending
+
+**TypeScript SDK** — Type-safe client library with full IntelliSense
+
+**Developer-Friendly** — Clean API with extensive documentation
+
+### Quick Example
 
 ```typescript
 import { NotifyHubClient } from "@notifyhub/sdk";
@@ -35,7 +58,7 @@ await client.sendEmail({
 });
 ```
 
-## Next Steps
+### Next Steps
 
 - [Installation](/docs/getting-started/installation) - Install the SDK
 - [Quick Start](/docs/getting-started/quickstart) - Send your first notification

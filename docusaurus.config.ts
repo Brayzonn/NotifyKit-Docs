@@ -51,16 +51,13 @@ const config: Config = {
     },
     navbar: {
       title: "NotifyHub",
-      logo: {
-        alt: "NotifyHub Logo",
-        src: "img/logo.svg",
-      },
+
       items: [
         {
+          label: "Docs",
           type: "docSidebar",
           sidebarId: "docs",
           position: "left",
-          label: "Docs",
         },
         {
           label: "API",
@@ -68,7 +65,7 @@ const config: Config = {
           position: "left",
         },
         {
-          label: "SDK",
+          label: "SDKs",
           to: "/docs/sdk/typescript",
           position: "left",
         },

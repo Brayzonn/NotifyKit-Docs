@@ -36,18 +36,18 @@ export default function Home() {
         <div className="container" style={{ padding: "4rem 0" }}>
           <div className="row">
             <div className="col col--4">
-              <h3>🚀 Easy to Use</h3>
+              <h3>Easy to Use</h3>
               <p>
                 Get started in minutes with our simple SDK and clear
                 documentation.
               </p>
             </div>
             <div className="col col--4">
-              <h3>⚡ Fast & Reliable</h3>
+              <h3>Fast & Reliable</h3>
               <p>Built on Bull queues with automatic retries and monitoring.</p>
             </div>
             <div className="col col--4">
-              <h3>💰 Affordable</h3>
+              <h3>Affordable</h3>
               <p>Simple pricing starting at $9/month. No hidden fees.</p>
             </div>
           </div>
