@@ -5,13 +5,13 @@ const sidebars: SidebarsConfig = {
     "introduction",
     {
       type: "category",
-      label: "🚀 Getting Started",
+      label: "Getting Started",
       collapsed: false,
       items: ["getting-started/installation", "getting-started/quickstart"],
     },
     {
       type: "category",
-      label: "📡 API Reference",
+      label: "API Reference",
       collapsed: false,
       items: [
         "api-reference/authentication",
@@ -21,17 +21,17 @@ const sidebars: SidebarsConfig = {
     },
     {
       type: "category",
-      label: "🔧 SDK",
+      label: " SDK",
       items: ["sdk/typescript"],
     },
     {
       type: "category",
-      label: "📘 Guides",
+      label: "Guides",
       items: ["guides/domain-verification"],
     },
     {
       type: "category",
-      label: "💡 Examples",
+      label: "Examples",
       items: ["examples/email-templates"],
     },
   ],

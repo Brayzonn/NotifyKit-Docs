@@ -19,7 +19,7 @@ import { NotifyHubClient } from "@notifyhub/sdk";
 
 const client = new NotifyHubClient({
   apiKey: process.env.NOTIFYHUB_API_KEY,
-  baseUrl: "https://api.notifyhub.com", // optional
+  baseUrl: "https://api.notifyhub.com",
 });
 ```
 

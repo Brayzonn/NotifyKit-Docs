@@ -67,6 +67,12 @@ html[data-theme="dark"] {
   font-weight: 600;
 }
 
+.menu__link--sublist-caret::after {
+  background-size: 1.5rem 1.5rem !important;
+  height: 1rem !important;
+  width: 1rem !important;
+}
+
 /* Content */
 .markdown {
   --ifm-h1-font-size: 2.5rem;
@@ -146,4 +152,29 @@ table {
 .hero__subtitle {
   font-size: 1.25rem;
   color: var(--ifm-color-emphasis-600);
+}
+
+/* Heading anchor links */
+.hash-link {
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  text-decoration: none;
+  margin-left: 0.5rem;
+}
+
+h2:hover .hash-link,
+h3:hover .hash-link,
+h4:hover .hash-link {
+  opacity: 1;
+}
+
+/* Replace # with link icon */
+.hash-link::before {
+  content: "🔗";
+  font-size: 0.55em;
+}
+
+/* Hide the # character */
+.hash-link .icon {
+  display: none;
 }

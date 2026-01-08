@@ -6,38 +6,38 @@ sidebar_position: 1
 
 Get started with NotifyHub in minutes.
 
-## Sign Up
+### Sign Up
 
 1. Visit [notifyhub.com](https://notifyhub.com)
 2. Create an account
 3. Get your API key from the dashboard
 
-## Install SDK
+### Install SDK
 
-### npm
+#### npm
 
 ```bash
 npm install @notifyhub/sdk
 ```
 
-### yarn
+#### yarn
 
 ```bash
 yarn add @notifyhub/sdk
 ```
 
-### pnpm
+#### pnpm
 
 ```bash
 pnpm add @notifyhub/sdk
 ```
 
-## Requirements
+### Requirements
 
 - Node.js 18 or higher
 - TypeScript 5.0+ (optional but recommended)
 
-## Verify Installation
+### Verify Installation
 
 Create a test file:
 
@@ -49,10 +49,10 @@ const client = new NotifyHubClient({
 });
 
 const pong = await client.ping();
-console.log(pong); // { success: true, message: 'pong' }
+console.log(pong); // {message: 'pong'}
 ```
 
-## Next Steps
+### Next Steps
 
 - [Quick Start Guide](/docs/getting-started/quickstart)
 - [Authentication](/docs/api-reference/authentication)
