@@ -6,7 +6,7 @@ sidebar_position: 2
 
 Send your first notification in under 5 minutes.
 
-## 1. Initialize Client
+### Initialize Client
 
 ```typescript
 import { NotifyHubClient } from "@notifyhub/sdk";
@@ -17,7 +17,7 @@ const client = new NotifyHubClient({
 });
 ```
 
-## 2. Send an Email
+### Send an Email
 
 ```typescript
 const job = await client.sendEmail({
@@ -29,7 +29,7 @@ const job = await client.sendEmail({
 console.log("Email queued:", job.jobId);
 ```
 
-## 3. Send a Webhook
+### Send a Webhook
 
 ```typescript
 const job = await client.sendWebhook({
@@ -44,7 +44,7 @@ const job = await client.sendWebhook({
 console.log("Webhook queued:", job.jobId);
 ```
 
-## 4. Check Job Status
+### Check Job Status
 
 ```typescript
 const status = await client.getJob(job.jobId);
@@ -57,7 +57,7 @@ console.log(status);
 // }
 ```
 
-## Error Handling
+### Error Handling
 
 ```typescript
 import { NotifyHubError } from "@notifyhub/sdk";
@@ -80,7 +80,7 @@ try {
 }
 ```
 
-## Next Steps
+### Next Steps
 
 - [API Reference](/docs/api-reference/send-email)
 - [SDK Examples](/docs/examples/email-templates)
