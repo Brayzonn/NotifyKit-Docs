@@ -6,19 +6,22 @@ sidebar_position: 2
 
 Send email notifications via SendGrid.
 
-## Basic Usage
+### Endpoint
 
-```typescript
-const job = await client.sendEmail({
-  to: "user@example.com",
-  subject: "Welcome!",
-  body: "<h1>Hello World</h1>",
-});
+```
+POST /api/v1/notifications/email
 ```
 
-## Parameters
+### Headers
 
-### Required
+| Header         | Value              | Required |
+| -------------- | ------------------ | -------- |
+| `X-API-Key`    | Your API key       | Yes      |
+| `Content-Type` | `application/json` | Yes      |
+
+### Request Body
+
+#### Required Fields
 
 | Parameter | Type     | Description                 |
 | --------- | -------- | --------------------------- |
@@ -26,96 +29,148 @@ const job = await client.sendEmail({
 | `subject` | `string` | Email subject line          |
 | `body`    | `string` | Email body (HTML supported) |
 
-### Optional
+#### Optional Fields
 
-| Parameter | Type       | Description                             |
-| --------- | ---------- | --------------------------------------- |
-| `from`    | `string`   | Sender email (requires verified domain) |
-| `replyTo` | `string`   | Reply-to email address                  |
-| `cc`      | `string[]` | CC recipients                           |
-| `bcc`     | `string[]` | BCC recipients                          |
+| Parameter        | Type     | Description                             |
+| ---------------- | -------- | --------------------------------------- |
+| `from`           | `string` | Sender email (requires verified domain) |
+| `idempotencyKey` | `string` | Unique key to prevent duplicate sends   |
 
-## Examples
+### Examples
 
-### Simple Email
+#### Simple Email
 
-```typescript
-await client.sendEmail({
-  to: "user@example.com",
-  subject: "Order Confirmation",
-  body: "<p>Your order #12345 has been confirmed.</p>",
-});
+```bash
+curl -X POST https://api.notifyhub.com/api/v1/notifications/email \
+  -H "X-API-Key: ntfy_sk_live_your_key_here" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "to": "user@example.com",
+    "subject": "Order Confirmation",
+    "body": "<p>Your order #12345 has been confirmed.</p>"
+  }'
 ```
 
-### HTML Template
+#### HTML Email Template
 
-```typescript
-const template = `
-<!DOCTYPE html>
-<html>
-<head>
-  <style>
-    .container { max-width: 600px; margin: 0 auto; }
-    .button { background: #2563eb; color: white; padding: 12px 24px; }
-  </style>
-</head>
-<body>
-  <div class="container">
-    <h1>Welcome {{name}}!</h1>
-    <p>Thanks for signing up.</p>
-    <a href="{{confirmUrl}}" class="button">Confirm Email</a>
-  </div>
-</body>
-</html>
-`;
-
-await client.sendEmail({
-  to: user.email,
-  subject: "Confirm Your Email",
-  body: template
-    .replace("{{name}}", user.name)
-    .replace("{{confirmUrl}}", confirmUrl),
-});
+```bash
+curl -X POST https://api.notifyhub.com/api/v1/notifications/email \
+  -H "X-API-Key: ntfy_sk_live_your_key_here" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "to": "user@example.com",
+    "subject": "Welcome!",
+    "body": "<!DOCTYPE html><html><body style=\"margin: 0; padding: 20px; font-family: Arial, sans-serif; background-color: #f4f4f4;\"><table role=\"presentation\" width=\"600\" style=\"margin: 0 auto; background-color: #ffffff; padding: 40px; border-radius: 8px;\"><tr><td style=\"text-align: center;\"><h1 style=\"color: #333; margin: 0 0 20px 0;\">Welcome John!</h1><p style=\"color: #666; font-size: 16px; line-height: 1.5; margin: 0 0 30px 0;\">Thanks for signing up. Click below to confirm your email.</p><table role=\"presentation\" style=\"margin: 0 auto;\"><tr><td style=\"background-color: #2563eb; border-radius: 4px;\"><a href=\"https://example.com/confirm?token=abc123\" style=\"display: inline-block; padding: 12px 32px; color: #ffffff; text-decoration: none; font-weight: bold;\">Confirm Email</a></td></tr></table><p style=\"color: #999; font-size: 14px; margin: 30px 0 0 0;\">© 2025 YourCompany. All rights reserved.</p></td></tr></table></body></html>"
+  }'
 ```
 
-### Custom From Address
+#### Custom From Address
 
-```typescript
-await client.sendEmail({
-  to: "user@example.com",
-  from: "noreply@yourdomain.com", // Requires verified domain
-  subject: "Newsletter",
-  body: "<h1>Monthly Update</h1>",
-});
+```bash
+curl -X POST https://api.notifyhub.com/api/v1/notifications/email \
+  -H "X-API-Key: ntfy_sk_live_your_key_here" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "to": "user@example.com",
+    "from": "noreply@yourdomain.com",
+    "subject": "Newsletter",
+    "body": "<h1>Monthly Update</h1>"
+  }'
 ```
 
-## Response
+:::info Domain Verification Required
+Custom `from` addresses require domain verification. See [Domain Verification](/docs/guides/domain-verification).
+:::
 
-```typescript
+### Idempotent Requests
+
+Prevent duplicate emails by using an idempotency key:
+
+```bash
+curl -X POST https://api.notifyhub.com/api/v1/notifications/email \
+  -H "X-API-Key: ntfy_sk_live_your_key_here" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "to": "user@example.com",
+    "subject": "Payment Confirmation",
+    "body": "<p>Payment received</p>",
+    "idempotencyKey": "payment-12345"
+  }'
+```
+
+Sending again with the same `idempotencyKey` returns `409 Conflict` with the original job details.
+
+### Response
+
+#### Success Response
+
+**Status:** `200 OK`
+
+```json
 {
-  jobId: 'job_abc123',
-  status: 'pending'
+  "success": true,
+  "data": {
+    "jobId": "job_abc123",
+    "status": "pending",
+    "type": "email",
+    "createdAt": "2026-01-09T12:34:56.789Z"
+  },
+  "timestamp": "2026-01-09T12:34:56.789Z"
 }
 ```
 
-## Error Handling
+#### Error Responses
 
-```typescript
-try {
-  await client.sendEmail({ ... });
-} catch (error) {
-  if (error.isStatus(400)) {
-    // Invalid email format
-  } else if (error.isStatus(403)) {
-    // Domain not verified (when using custom from)
-  } else if (error.isStatus(429)) {
-    // Rate limit exceeded
-  }
+##### 400 Bad Request
+
+Invalid request parameters (e.g., invalid email format):
+
+```json
+{
+  "success": false,
+  "error": "Invalid email address",
+  "timestamp": "2026-01-09T12:34:56.789Z"
+}
+```
+
+#### 403 Forbidden
+
+Domain not verified (when using custom `from` address):
+
+```json
+{
+  "success": false,
+  "error": "Domain not verified. Please verify yourdomain.com first.",
+  "timestamp": "2026-01-09T12:34:56.789Z"
+}
+```
+
+#### 409 Conflict
+
+Duplicate idempotency key:
+
+```json
+{
+  "success": false,
+  "error": "Email already sent with this idempotency key",
+  "timestamp": "2026-01-09T12:34:56.789Z"
+}
+```
+
+#### 429 Too Many Requests
+
+Rate limit exceeded:
+
+```json
+{
+  "success": false,
+  "error": "Rate limit exceeded. Please try again later.",
+  "timestamp": "2026-01-09T12:34:56.789Z"
 }
 ```
 
 ## Next Steps
 
 - [Domain Verification](/docs/guides/domain-verification)
-- [Email Templates](/docs/examples/email-templates)
-- [Check Job Status](/docs/api-reference/job-status)
+- [Check Job Status](/docs/api-reference/jobs)
+- [Webhooks](/docs/api-reference/webhooks)

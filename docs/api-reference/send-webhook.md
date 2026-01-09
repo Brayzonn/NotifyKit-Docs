@@ -6,114 +6,227 @@ sidebar_position: 3
 
 Send webhook notifications with automatic retries.
 
-## Basic Usage
+### Endpoint
 
-```typescript
-const job = await client.sendWebhook({
-  url: "https://your-app.com/webhook",
-  payload: {
-    event: "user.created",
-    data: { userId: "123" },
-  },
-});
+```
+POST /api/v1/notifications/webhook
 ```
 
-## Parameters
+### Headers
 
-| Parameter | Type              | Description                 |
-| --------- | ----------------- | --------------------------- |
-| `url`     | `string`          | Webhook endpoint URL        |
-| `payload` | `object`          | JSON payload to send        |
-| `method`  | `'POST' \| 'PUT'` | HTTP method (default: POST) |
-| `headers` | `object`          | Custom headers (optional)   |
+| Header         | Value              | Required |
+| -------------- | ------------------ | -------- |
+| `X-API-Key`    | Your API key       | Yes      |
+| `Content-Type` | `application/json` | Yes      |
 
-## Examples
+### Request Body
 
-### Basic Webhook
+#### Required Fields
 
-```typescript
-await client.sendWebhook({
-  url: "https://api.example.com/notifications",
-  payload: {
-    type: "payment.completed",
-    amount: 49.99,
-    currency: "USD",
-  },
-});
+| Parameter | Type     | Description          |
+| --------- | -------- | -------------------- |
+| `url`     | `string` | Webhook endpoint URL |
+| `payload` | `object` | JSON payload to send |
+
+#### Optional Fields
+
+| Parameter        | Type           | Description                           |
+| ---------------- | -------------- | ------------------------------------- |
+| `method`         | `string`       | HTTP method (default: `POST`)         |
+| `headers`        | `object`       | Custom headers                        |
+| `priority`       | `1 \| 5 \| 10` | Job priority (1=high, 10=low)         |
+| `idempotencyKey` | `string`       | Unique key to prevent duplicate sends |
+
+### Examples
+
+#### Basic Webhook
+
+```bash
+curl -X POST https://api.notifyhub.com/api/v1/notifications/webhook \
+  -H "X-API-Key: ntfy_sk_live_your_key_here" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "url": "https://api.example.com/notifications",
+    "payload": {
+      "type": "payment.completed",
+      "amount": 49.99,
+      "currency": "USD"
+    }
+  }'
 ```
 
-### Custom Headers
+#### Custom Headers
 
-```typescript
-await client.sendWebhook({
-  url: "https://api.example.com/webhook",
-  payload: { event: "test" },
-  headers: {
-    "X-Custom-Header": "value",
-    Authorization: "Bearer token",
-  },
-});
+```bash
+curl -X POST https://api.notifyhub.com/api/v1/notifications/webhook \
+  -H "X-API-Key: ntfy_sk_live_your_key_here" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "url": "https://api.example.com/webhook",
+    "payload": {
+      "event": "user.created",
+      "userId": "123"
+    },
+    "headers": {
+      "X-Custom-Header": "value",
+      "Authorization": "Bearer your_token"
+    }
+  }'
 ```
 
-### PUT Request
+#### PUT Request
 
-```typescript
-await client.sendWebhook({
-  url: "https://api.example.com/resource/123",
-  method: "PUT",
-  payload: {
-    status: "completed",
-  },
-});
+```bash
+curl -X POST https://api.notifyhub.com/api/v1/notifications/webhook \
+  -H "X-API-Key: ntfy_sk_live_your_key_here" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "url": "https://api.example.com/resource/123",
+    "method": "PUT",
+    "payload": {
+      "status": "completed"
+    }
+  }'
 ```
 
-## Retry Logic
+#### High Priority Webhook
 
-NotifyHub automatically retries failed webhooks:
+```bash
+curl -X POST https://api.notifyhub.com/api/v1/notifications/webhook \
+  -H "X-API-Key: ntfy_sk_live_your_key_here" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "url": "https://api.example.com/urgent",
+    "payload": {
+      "alert": "critical"
+    },
+    "priority": 1
+  }'
+```
 
-- **3 retry attempts**
-- **Exponential backoff** (1s, 5s, 15s)
-- **Success on 2xx status codes**
-- **Failure on 4xx/5xx codes**
+#### Idempotent Request
 
-## Response
+```bash
+curl -X POST https://api.notifyhub.com/api/v1/notifications/webhook \
+  -H "X-API-Key: ntfy_sk_live_your_key_here" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "url": "https://api.example.com/webhook",
+    "payload": {
+      "orderId": "order_123"
+    },
+    "idempotencyKey": "order-123-webhook"
+  }'
+```
 
-```typescript
+### Retry Logic
+
+NotifyHub automatically retries failed webhooks with exponential backoff:
+
+- **Max attempts:** 3
+- **Backoff strategy:** Exponential (2s, 4s, 8s)
+- **Success criteria:** 2xx HTTP status codes
+- **No retry on:** 4xx client errors (invalid URL, unauthorized, etc.)
+- **Retry on:** 5xx server errors, network failures, timeouts
+
+### Request Headers Sent
+
+NotifyHub adds these headers to webhook requests:
+
+```
+Content-Type: application/json
+User-Agent: NotifyHub/1.0
+```
+
+Plus any custom headers you provide.
+
+### Response
+
+#### Success Response
+
+**Status:** `200 OK`
+
+```json
 {
-  jobId: 'job_xyz789',
-  status: 'pending'
+  "success": true,
+  "data": {
+    "jobId": "job_xyz789",
+    "status": "pending",
+    "type": "webhook",
+    "createdAt": "2026-01-09T12:34:56.789Z"
+  },
+  "timestamp": "2026-01-09T12:34:56.789Z"
 }
 ```
 
-## Checking Status
+### Error Responses
 
-```typescript
-const status = await client.getJob(job.jobId);
-console.log(status);
-// {
-//   id: 'job_xyz789',
-//   type: 'webhook',
-//   status: 'completed',
-//   attempts: 1,
-//   completedAt: '2026-01-07T...'
-// }
-```
+#### 400 Bad Request
 
-## Error Handling
+Invalid URL or payload:
 
-```typescript
-try {
-  await client.sendWebhook({ ... });
-} catch (error) {
-  if (error.isStatus(400)) {
-    // Invalid URL or payload
-  } else if (error.isStatus(429)) {
-    // Rate limit exceeded
-  }
+```json
+{
+  "success": false,
+  "error": "Invalid URL format",
+  "timestamp": "2026-01-09T12:34:56.789Z"
 }
 ```
 
-## Next Steps
+#### 409 Conflict
 
-- [Job Management](/docs/api-reference/job-status)
-- [Webhook Examples](/docs/examples/webhooks)
+Duplicate idempotency key:
+
+```json
+{
+  "success": false,
+  "error": "Duplicate request detected",
+  "existingJobId": "job_abc123",
+  "timestamp": "2026-01-09T12:34:56.789Z"
+}
+```
+
+#### 429 Too Many Requests
+
+Rate limit exceeded:
+
+```json
+{
+  "success": false,
+  "error": "Rate limit exceeded. Please try again later.",
+  "timestamp": "2026-01-09T12:34:56.789Z"
+}
+```
+
+### Checking Webhook Status
+
+After sending a webhook, check its delivery status:
+
+```bash
+curl https://api.notifyhub.com/api/v1/notifications/jobs/job_xyz789 \
+  -H "X-API-Key: ntfy_sk_live_your_key_here"
+```
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "data": {
+    "id": "job_xyz789",
+    "type": "webhook",
+    "status": "completed",
+    "attempts": 1,
+    "createdAt": "2026-01-09T12:34:56.789Z",
+    "startedAt": "2026-01-09T12:34:57.123Z",
+    "completedAt": "2026-01-09T12:34:58.456Z"
+  },
+  "timestamp": "2026-01-09T12:35:00.000Z"
+}
+```
+
+### Next Steps
+
+- [Check Job Status](/docs/api-reference/jobs)
+- [Webhook Security](/docs/guides/webhook-security)
+- [Retry Configuration](/docs/guides/retry-logic)

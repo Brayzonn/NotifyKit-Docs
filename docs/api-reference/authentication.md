@@ -6,7 +6,7 @@ sidebar_position: 1
 
 Authenticate your API requests with API keys.
 
-## API Keys
+### API Keys
 
 All API requests require an API key passed in the `X-API-Key` header.
 
@@ -15,16 +15,16 @@ curl https://api.notifyhub.com/api/v1/ping \
   -H "X-API-Key: ntfy_sk_live_your_key_here"
 ```
 
-## Getting Your API Key
+### Getting Your API Key
 
 1. Log in to your NotifyHub dashboard
 2. Navigate to Settings → API Keys
 3. Click "Create API Key"
 4. Copy your key (shown only once)
 
-## Key Types
+### Key Types
 
-### Development Keys
+#### Development Keys
 
 ```
 ntfy_sk_dev_...
@@ -34,7 +34,7 @@ ntfy_sk_dev_...
 - Limited rate limits
 - Free tier
 
-### Production Keys
+#### Production Keys
 
 ```
 ntfy_sk_live_...
@@ -44,26 +44,25 @@ ntfy_sk_live_...
 - Higher rate limits
 - Paid plans
 
-## Security Best Practices
+### Security Best Practices
 
 :::danger Keep Keys Secret
 Never commit API keys to version control or expose them in client-side code.
 :::
 
-### Environment Variables
+#### Environment Variables
 
 ```bash
 # .env
 NOTIFYHUB_API_KEY=ntfy_sk_live_your_key_here
 ```
 
-```typescript
-const client = new NotifyHubClient({
-  apiKey: process.env.NOTIFYHUB_API_KEY,
-});
+```javascript
+// Load from environment variables
+const apiKey = process.env.NOTIFYHUB_API_KEY;
 ```
 
-## Rate Limits
+### Rate Limits
 
 | Plan    | Rate Limit       |
 | ------- | ---------------- |
@@ -71,9 +70,22 @@ const client = new NotifyHubClient({
 | Indie   | 100 requests/min |
 | Startup | 500 requests/min |
 
-## Testing Authentication
+### Testing Authentication
 
-```typescript
-const pong = await client.ping();
-// {  message: 'pong'}
+Test your API key by calling the info endpoint:
+
+```bash
+curl https://api.notifyhub.com/api/v1/info \
+  -H "X-API-Key: ntfy_sk_live_your_key_here"
+```
+
+**Response:**
+
+```json
+{
+  "name": "NotifyHub API",
+  "version": "1.0.0",
+  "description": "Notification infrastructure service for emails and webhooks",
+  "documentation": "https://docs.notifyhub.com"
+}
 ```

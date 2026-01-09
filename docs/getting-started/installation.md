@@ -49,7 +49,7 @@ const client = new NotifyHubClient({
 });
 
 const pong = await client.ping();
-console.log(pong); // {message: 'pong'}
+console.log(pong); //'pong'
 ```
 
 ### Next Steps
