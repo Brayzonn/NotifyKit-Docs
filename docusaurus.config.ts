@@ -32,7 +32,6 @@ const config: Config = {
         docs: {
           sidebarPath: "./sidebars.ts",
           routeBasePath: "docs",
-          editUrl: "https://github.com/yourusername/notifyhub-docs/tree/main/",
         },
         blog: false,
         theme: {

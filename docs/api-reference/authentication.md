@@ -65,15 +65,15 @@ const client = new NotifyHubClient({
 
 ## Rate Limits
 
-| Plan    | Rate Limit           |
-| ------- | -------------------- |
-| Free    | 100 requests/hour    |
-| Indie   | 1,000 requests/hour  |
-| Startup | 10,000 requests/hour |
+| Plan    | Rate Limit       |
+| ------- | ---------------- |
+| Free    | 10 requests/min  |
+| Indie   | 100 requests/min |
+| Startup | 500 requests/min |
 
 ## Testing Authentication
 
 ```typescript
 const pong = await client.ping();
-// { success: true, message: 'pong', timestamp: '...' }
+// {  message: 'pong'}
 ```

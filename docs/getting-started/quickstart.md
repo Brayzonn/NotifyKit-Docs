@@ -53,7 +53,14 @@ console.log(status);
 //   id: 'job_123',
 //   type: 'email',
 //   status: 'completed',
-//   attempts: 1
+//   priority: 5,
+//   payload: { to: '...', subject: '...', body: '...' },
+//   attempts: 1,
+//   maxAttempts: 3,
+//   errorMessage: null,
+//   createdAt: '2026-01-07T12:34:56.789Z',
+//   startedAt: '2026-01-07T12:35:01.234Z',
+//   completedAt: '2026-01-07T12:35:03.567Z'
 // }
 ```
 
@@ -73,8 +80,19 @@ try {
     console.error("Status:", error.statusCode);
     console.error("Message:", error.message);
 
+    // Example error response:
+    // {
+    //   statusCode: 400,
+    //   message: "Invalid email format",
+    //   error: "Bad Request"
+    // }
+
     if (error.isStatus(400)) {
       console.error("Bad request - check your input");
+    } else if (error.isStatus(401)) {
+      console.error("Invalid API key");
+    } else if (error.isStatus(429)) {
+      console.error("Rate limit exceeded");
     }
   }
 }
