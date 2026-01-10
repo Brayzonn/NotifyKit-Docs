@@ -101,12 +101,12 @@ GET /api/v1/notifications/jobs
 
 ### Query Parameters
 
-| Parameter | Type                                                 | Description              | Default |
-| --------- | ---------------------------------------------------- | ------------------------ | ------- |
-| `page`    | `number`                                             | Page number              | `1`     |
-| `limit`   | `number`                                             | Jobs per page (max: 100) | `20`    |
-| `type`    | `email` \| `webhook`                                 | Filter by job type       | -       |
-| `status`  | `pending` \| `processing` \| `completed` \| `failed` | Filter by status         | -       |
+| Parameter | Type     | Description                                                         | Default |
+| --------- | -------- | ------------------------------------------------------------------- | ------- |
+| `page`    | `number` | Page number                                                         | `1`     |
+| `limit`   | `number` | Jobs per page (max: 100)                                            | `20`    |
+| `type`    | `string` | Filter by job type: `email` or `webhook`                            | -       |
+| `status`  | `string` | Filter by status: `pending`, `processing`, `completed`, or `failed` | -       |
 
 ### Examples
 
@@ -245,9 +245,3 @@ Job doesn't exist or cannot be retried:
 :::info Retry Limitations
 Only jobs with `failed` status can be retried. Jobs that are `pending`, `processing`, or `completed` cannot be retried.
 :::
-
-## Next Steps
-
-- [Send Email](/docs/api-reference/send-email)
-- [Send Webhook](/docs/api-reference/send-webhook)
-- [Monitoring & Logs](/docs/guides/monitoring)

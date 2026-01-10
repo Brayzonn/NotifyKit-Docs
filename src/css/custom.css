@@ -188,3 +188,8 @@ h4:hover .hash-link {
 .hash-link .icon {
   display: none;
 }
+
+/* Add top margin/padding to sidebar */
+.theme-doc-sidebar-container {
+  padding-top: 2rem;
+}

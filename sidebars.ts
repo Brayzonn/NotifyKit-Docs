@@ -17,6 +17,7 @@ const sidebars: SidebarsConfig = {
         "api-reference/authentication",
         "api-reference/send-email",
         "api-reference/send-webhook",
+        "api-reference/jobs",
       ],
     },
     {
