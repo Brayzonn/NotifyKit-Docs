@@ -53,12 +53,6 @@ const config: Config = {
 
       items: [
         {
-          label: "Docs",
-          type: "docSidebar",
-          sidebarId: "docs",
-          position: "left",
-        },
-        {
           label: "API",
           to: "/docs/api-reference/authentication",
           position: "left",
@@ -71,11 +65,6 @@ const config: Config = {
         {
           href: "https://notifyhub.com",
           label: "Dashboard",
-          position: "right",
-        },
-        {
-          href: "https://github.com/yourusername/notifyhub",
-          label: "GitHub",
           position: "right",
         },
       ],
@@ -118,11 +107,7 @@ const config: Config = {
           items: [
             {
               label: "GitHub",
-              href: "https://github.com/yourusername/notifyhub",
-            },
-            {
-              label: "Twitter",
-              href: "https://twitter.com/notifyhub",
+              href: "https://github.com/brayzonn/NotifyHub-Docs",
             },
           ],
         },
@@ -131,7 +116,7 @@ const config: Config = {
     },
     prism: {
       theme: prismThemes.github,
-      darkTheme: prismThemes.dracula,
+      darkTheme: prismThemes.oneDark,
       additionalLanguages: ["bash", "json"],
     },
   } satisfies Preset.ThemeConfig,

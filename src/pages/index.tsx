@@ -8,14 +8,14 @@ export default function Home() {
       title="NotifyHub Documentation"
       description="Simple notification infrastructure for developers"
     >
-      <main>
-        <div className="hero hero--primary">
+      <main className="landing-container">
+        <div className="hero">
           <div className="container">
             <h1 className="hero__title">NotifyHub Documentation</h1>
             <p className="hero__subtitle">
               Simple, affordable notification infrastructure for developers
             </p>
-            <div style={{ marginTop: "2rem" }}>
+            <div className="hero__buttons">
               <Link
                 className="button button--primary button--lg"
                 to="/docs/introduction"
@@ -25,7 +25,6 @@ export default function Home() {
               <Link
                 className="button button--secondary button--lg"
                 to="/docs/api-reference/authentication"
-                style={{ marginLeft: "1rem" }}
               >
                 API Reference
               </Link>
@@ -33,22 +32,32 @@ export default function Home() {
           </div>
         </div>
 
-        <div className="container" style={{ padding: "4rem 0" }}>
-          <div className="row">
-            <div className="col col--4">
-              <h3>Easy to Use</h3>
-              <p>
-                Get started in minutes with our simple SDK and clear
-                documentation.
-              </p>
-            </div>
-            <div className="col col--4">
-              <h3>Fast & Reliable</h3>
-              <p>Built on Bull queues with automatic retries and monitoring.</p>
-            </div>
-            <div className="col col--4">
-              <h3>Affordable</h3>
-              <p>Simple pricing starting at $9/month. No hidden fees.</p>
+        <div className="features-section">
+          <div className="container">
+            <div className="row">
+              <div className="col col--4">
+                <div className="feature-card">
+                  <h3>Easy to Use</h3>
+                  <p>
+                    Get started in minutes with our simple SDK and clear
+                    documentation.
+                  </p>
+                </div>
+              </div>
+              <div className="col col--4">
+                <div className="feature-card">
+                  <h3>Fast & Reliable</h3>
+                  <p>
+                    Built on Bull queues with automatic retries and monitoring.
+                  </p>
+                </div>
+              </div>
+              <div className="col col--4">
+                <div className="feature-card">
+                  <h3>Affordable</h3>
+                  <p>Simple pricing starting at $9/month. No hidden fees.</p>
+                </div>
+              </div>
             </div>
           </div>
         </div>
