@@ -72,7 +72,7 @@ html[data-theme="dark"] .navbar {
   font-weight: 700;
   font-size: 1.25rem;
   padding-left: 0.15rem;
-  margin-right: 2rem;
+  margin-right: 4rem;
 }
 
 @media (max-width: 768px) {
@@ -230,12 +230,6 @@ table {
 html[data-theme="dark"] .button--secondary {
   color: var(--ifm-color-primary-light);
   border-color: var(--ifm-color-primary-light);
-}
-
-.button--secondary:hover {
-  background-color: var(--ifm-color-primary);
-  color: white;
-  transform: translateY(-1px);
 }
 
 html[data-theme="dark"] .button--secondary:hover {

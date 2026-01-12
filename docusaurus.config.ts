@@ -53,7 +53,7 @@ const config: Config = {
 
       items: [
         {
-          label: "API",
+          label: "REST API",
           to: "/docs/api-reference/authentication",
           position: "left",
         },
