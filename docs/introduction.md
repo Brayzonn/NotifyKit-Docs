@@ -4,62 +4,75 @@ sidebar_position: 1
 
 # Introduction
 
-Welcome to NotifyHub - a simple, affordable notification infrastructure for developers.
+NotifyKit is a simple, affordable notification infrastructure for indie developers, small teams, and startups.
 
-### What is NotifyHub?
+### What is NotifyKit?
 
-NotifyHub offers production-ready notification infrastructure while removing the operational overhead from your application.
+Most applications eventually need to send emails and trigger webhooks — for order confirmations, password resets, event notifications, and more. The operational overhead adds up fast: retries, delivery logs, deduplication, queue management, domain setup.
 
-Most teams start with an email provider and a background queue. Over time, that grows into retries, deduplication, delivery logs, dead-letter queues, domain setup, and on-call maintenance.
+NotifyKit handles all of that behind a clean API. You make one call; NotifyKit queues it, delivers it, retries on failure, and logs the result.
 
-NotifyHub handles these concerns behind a simple, type-safe API, so notifications don't become a system you have to manage.
+It's a focused alternative for teams that don't need the full complexity of an enterprise notification platform.
 
-It's a focused, affordable alternative for developers who find full-featured platforms to be overkill for their use case.
+### What NotifyKit Handles
 
-### What NotifyHub Does for You
+- Background processing and automatic retries
+- Idempotent delivery — no accidental double-sends
+- Delivery logs with job status tracking
+- Domain verification for custom sender addresses
+- Per-plan rate limiting and monthly quotas
 
-NotifyHub takes ownership of the hard parts of notification delivery:
+### What NotifyKit Sends
 
-- Reliable background processing and retries
-- Safe, idempotent delivery (no accidental double sends)
-- Auditable delivery logs
-- Domain verification and email best practices
-- Predictable, simple pricing
+**Emails** — Send transactional emails via SendGrid. On the Free plan, emails go through NotifyKit's shared SendGrid infrastructure. On paid plans, you connect your own SendGrid API key (BYOK — bring your own key), giving you full control over deliverability, sender reputation, and sending limits.
 
-You make an API call. NotifyHub handles the rest.
+> **Coming soon:** Support for Resend, Mailgun, and AWS SES.
 
-### Key Features
+**Webhooks** — Deliver HTTP callbacks to any endpoint, with configurable HTTP method, custom headers, and automatic exponential backoff retries on failure.
 
-**Email Delivery** — Send emails via SendGrid with custom domain support
+### Plans
 
-**Webhook Notifications** — Reliable webhook delivery with automatic retries
+| Plan    | Price     | Monthly Limit     | Emails                            |
+| ------- | --------- | ----------------- | --------------------------------- |
+| Free    | $0        | 100 notifications | Shared with webhook quota         |
+| Indie   | $9/month  | 4,000 webhooks    | Unlimited (via your SendGrid key) |
+| Startup | $30/month | 15,000 webhooks   | Unlimited (via your SendGrid key) |
 
-**Queue Management** — Built on Bull/BullMQ with Redis for reliability
-
-**Domain Verification** — Verify custom domains for professional email sending
-
-**TypeScript SDK** — Type-safe client library with full IntelliSense
-
-**Developer-Friendly** — Clean API with extensive documentation
+On the Free plan, every notification (email or webhook) counts toward a single 100/month limit. On paid plans, emails are unlimited and only webhooks count toward the monthly quota.
 
 ### Quick Example
 
 ```typescript
-import { NotifyHubClient } from "@notifyhub/sdk";
+import { NotifyKitClient } from "@notifykit/sdk";
 
-const client = new NotifyHubClient({
-  apiKey: "your-api-key",
+const client = new NotifyKitClient({
+  apiKey: process.env.NOTIFYKIT_API_KEY!,
 });
 
-await client.sendEmail({
+// Send an email
+const emailJob = await client.sendEmail({
   to: "user@example.com",
   subject: "Welcome!",
   body: "<h1>Hello World</h1>",
+  idempotencyKey: "welcome-user-123",
 });
+
+console.log("Email queued:", emailJob.jobId);
+
+// Send a webhook
+const webhookJob = await client.sendWebhook({
+  url: "https://your-app.com/webhooks/events",
+  payload: {
+    event: "user.signup",
+    userId: "123",
+  },
+});
+
+console.log("Webhook queued:", webhookJob.jobId);
 ```
 
 ### Next Steps
 
-- [Installation](/docs/getting-started/installation) - Install the SDK
-- [Quick Start](/docs/getting-started/quickstart) - Send your first notification
-- [API Reference](/docs/api-reference/authentication) - Explore the API
+- [Installation](/docs/getting-started/installation) — Install the SDK
+- [Quick Start](/docs/getting-started/quickstart) — Send your first notification
+- [API Reference](/docs/api-reference/authentication) — Explore the full API
