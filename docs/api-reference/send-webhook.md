@@ -4,7 +4,7 @@ sidebar_position: 3
 
 # Send Webhook
 
-Send webhook notifications with automatic retries.
+Queue a webhook notification for delivery with automatic retries.
 
 ### Endpoint
 
@@ -23,27 +23,27 @@ POST /api/v1/notifications/webhook
 
 #### Required Fields
 
-| Parameter | Type     | Description          |
-| --------- | -------- | -------------------- |
-| `url`     | `string` | Webhook endpoint URL |
-| `payload` | `object` | JSON payload to send |
+| Parameter | Type     | Description                                      |
+| --------- | -------- | ------------------------------------------------ |
+| `url`     | `string` | Webhook endpoint URL (must be a valid HTTPS URL) |
+| `payload` | `object` | JSON payload to send                             |
 
 #### Optional Fields
 
-| Parameter        | Type           | Description                           |
-| ---------------- | -------------- | ------------------------------------- |
-| `method`         | `string`       | HTTP method (default: `POST`)         |
-| `headers`        | `object`       | Custom headers                        |
-| `priority`       | `1 \| 5 \| 10` | Job priority (1=high, 10=low)         |
-| `idempotencyKey` | `string`       | Unique key to prevent duplicate sends |
+| Parameter        | Type           | Description                                           |
+| ---------------- | -------------- | ----------------------------------------------------- |
+| `method`         | `string`       | HTTP method (default: `POST`)                         |
+| `headers`        | `object`       | Custom headers to include in the request              |
+| `priority`       | `1 \| 5 \| 10` | Job priority (1=high, 5=normal, 10=low). Default: `5` |
+| `idempotencyKey` | `string`       | Unique key to prevent duplicate sends                 |
 
 ### Examples
 
 #### Basic Webhook
 
 ```bash
-curl -X POST https://api.notifyhub.com/api/v1/notifications/webhook \
-  -H "X-API-Key: ntfy_sk_live_your_key_here" \
+curl -X POST https://api.notifykit.dev/api/v1/notifications/webhook \
+  -H "X-API-Key: nh_your_key_here" \
   -H "Content-Type: application/json" \
   -d '{
     "url": "https://api.example.com/notifications",
@@ -57,9 +57,11 @@ curl -X POST https://api.notifyhub.com/api/v1/notifications/webhook \
 
 #### Custom Headers
 
+Use custom headers to authenticate the request at the receiving endpoint:
+
 ```bash
-curl -X POST https://api.notifyhub.com/api/v1/notifications/webhook \
-  -H "X-API-Key: ntfy_sk_live_your_key_here" \
+curl -X POST https://api.notifykit.dev/api/v1/notifications/webhook \
+  -H "X-API-Key: nh_your_key_here" \
   -H "Content-Type: application/json" \
   -d '{
     "url": "https://api.example.com/webhook",
@@ -68,8 +70,8 @@ curl -X POST https://api.notifyhub.com/api/v1/notifications/webhook \
       "userId": "123"
     },
     "headers": {
-      "X-Custom-Header": "value",
-      "Authorization": "Bearer your_token"
+      "X-Webhook-Secret": "your_shared_secret",
+      "X-Event-Type": "user.created"
     }
   }'
 ```
@@ -77,8 +79,8 @@ curl -X POST https://api.notifyhub.com/api/v1/notifications/webhook \
 #### PUT Request
 
 ```bash
-curl -X POST https://api.notifyhub.com/api/v1/notifications/webhook \
-  -H "X-API-Key: ntfy_sk_live_your_key_here" \
+curl -X POST https://api.notifykit.dev/api/v1/notifications/webhook \
+  -H "X-API-Key: nh_your_key_here" \
   -H "Content-Type: application/json" \
   -d '{
     "url": "https://api.example.com/resource/123",
@@ -92,13 +94,14 @@ curl -X POST https://api.notifyhub.com/api/v1/notifications/webhook \
 #### High Priority Webhook
 
 ```bash
-curl -X POST https://api.notifyhub.com/api/v1/notifications/webhook \
-  -H "X-API-Key: ntfy_sk_live_your_key_here" \
+curl -X POST https://api.notifykit.dev/api/v1/notifications/webhook \
+  -H "X-API-Key: nh_your_key_here" \
   -H "Content-Type: application/json" \
   -d '{
     "url": "https://api.example.com/urgent",
     "payload": {
-      "alert": "critical"
+      "alert": "critical",
+      "threshold": "exceeded"
     },
     "priority": 1
   }'
@@ -106,9 +109,16 @@ curl -X POST https://api.notifyhub.com/api/v1/notifications/webhook \
 
 #### Idempotent Request
 
+Use an `idempotencyKey` to prevent duplicate jobs if the same request is sent more than once
+(e.g., your client retries after a network timeout). If a job with the same key already exists,
+the API returns `409 Conflict` and no new job is created.
+
+To retry a **failed** job, use the [Retry Job](/docs/api-reference/jobs) endpoint instead —
+idempotency keys do not apply there.
+
 ```bash
-curl -X POST https://api.notifyhub.com/api/v1/notifications/webhook \
-  -H "X-API-Key: ntfy_sk_live_your_key_here" \
+curl -X POST https://api.notifykit.dev/api/v1/notifications/webhook \
+  -H "X-API-Key: nh_your_key_here" \
   -H "Content-Type: application/json" \
   -d '{
     "url": "https://api.example.com/webhook",
@@ -121,30 +131,32 @@ curl -X POST https://api.notifyhub.com/api/v1/notifications/webhook \
 
 ### Retry Logic
 
-NotifyHub automatically retries failed webhooks with exponential backoff:
+NotifyKit automatically retries failed webhook deliveries:
 
 - **Max attempts:** 3
-- **Backoff strategy:** Exponential (2s, 4s, 8s)
-- **Success criteria:** 2xx HTTP status codes
-- **No retry on:** 4xx client errors (invalid URL, unauthorized, etc.)
-- **Retry on:** 5xx server errors, network failures, timeouts
+- **Backoff strategy:** Exponential (2s → 4s → 8s between retries)
+- **Success criteria:** Any 2xx HTTP response from your endpoint
+- **Retried on:** 5xx server errors, network failures, connection timeouts
+- **Not retried on:** 4xx client errors (invalid URL, unauthorized, etc.)
 
-### Request Headers Sent
+See [Retry Logic](/docs/guides/retry-logic) for details.
 
-NotifyHub adds these headers to webhook requests:
+### Request Headers Sent to Your Endpoint
+
+NotifyKit adds these headers to every webhook delivery:
 
 ```
 Content-Type: application/json
-User-Agent: NotifyHub/1.0
+User-Agent: NotifyKit/1.0
 ```
 
-Plus any custom headers you provide.
+Any custom `headers` you include are added on top of these.
 
 ### Response
 
-#### Success Response
+Webhooks are queued immediately and delivered asynchronously. Check the job status to confirm delivery.
 
-**Status:** `200 OK`
+**Status:** `202 Accepted`
 
 ```json
 {
@@ -163,48 +175,59 @@ Plus any custom headers you provide.
 
 #### 400 Bad Request
 
-Invalid URL or payload:
+Invalid URL or missing required field:
 
 ```json
 {
   "success": false,
-  "error": "Invalid URL format",
+  "error": "url must be a valid HTTPS URL",
+  "timestamp": "2026-01-09T12:34:56.789Z"
+}
+```
+
+#### 403 Forbidden
+
+Monthly quota exceeded:
+
+```json
+{
+  "success": false,
+  "error": "Monthly usage limit exceeded (4000/4000). Upgrade your plan or wait for reset on 2/1/2026.",
   "timestamp": "2026-01-09T12:34:56.789Z"
 }
 ```
 
 #### 409 Conflict
 
-Duplicate idempotency key:
+Duplicate `idempotencyKey` — webhook was already queued:
 
 ```json
 {
   "success": false,
   "error": "Duplicate request detected",
-  "existingJobId": "job_abc123",
   "timestamp": "2026-01-09T12:34:56.789Z"
 }
 ```
 
 #### 429 Too Many Requests
 
-Rate limit exceeded:
+API rate limit exceeded:
 
 ```json
 {
   "success": false,
-  "error": "Rate limit exceeded. Please try again later.",
+  "error": "Rate limit exceeded",
   "timestamp": "2026-01-09T12:34:56.789Z"
 }
 ```
 
-### Checking Webhook Status
+### Checking Delivery Status
 
-After sending a webhook, check its delivery status:
+After sending a webhook, poll the job endpoint to confirm delivery:
 
 ```bash
-curl https://api.notifyhub.com/api/v1/notifications/jobs/job_xyz789 \
-  -H "X-API-Key: ntfy_sk_live_your_key_here"
+curl https://api.notifykit.dev/api/v1/notifications/jobs/job_xyz789 \
+  -H "X-API-Key: nh_your_key_here"
 ```
 
 **Response:**
@@ -216,7 +239,10 @@ curl https://api.notifyhub.com/api/v1/notifications/jobs/job_xyz789 \
     "id": "job_xyz789",
     "type": "webhook",
     "status": "completed",
+    "priority": 5,
     "attempts": 1,
+    "maxAttempts": 3,
+    "errorMessage": null,
     "createdAt": "2026-01-09T12:34:56.789Z",
     "startedAt": "2026-01-09T12:34:57.123Z",
     "completedAt": "2026-01-09T12:34:58.456Z"
@@ -229,4 +255,4 @@ curl https://api.notifyhub.com/api/v1/notifications/jobs/job_xyz789 \
 
 - [Check Job Status](/docs/api-reference/jobs)
 - [Webhook Security](/docs/guides/webhook-security)
-- [Retry Configuration](/docs/guides/retry-logic)
+- [Retry Logic](/docs/guides/retry-logic)
