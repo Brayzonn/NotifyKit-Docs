@@ -5,13 +5,13 @@ import Link from "@docusaurus/Link";
 export default function Home() {
   return (
     <Layout
-      title="NotifyHub Documentation"
+      title="NotifyKit Documentation"
       description="Simple notification infrastructure for developers"
     >
       <main className="landing-container">
         <div className="hero">
           <div className="container">
-            <h1 className="hero__title">NotifyHub Documentation</h1>
+            <h1 className="hero__title">NotifyKit Documentation</h1>
             <p className="hero__subtitle">
               Simple, affordable notification infrastructure for developers
             </p>

@@ -91,7 +91,7 @@ html[data-theme="dark"] .navbar {
   display: none !important;
 }
 
-.navbar__link[href*="notifyhub.com"] {
+.navbar__link[href*="notifykit.dev"] {
   background-color: var(--ifm-color-primary);
   color: white !important;
   padding: 0.35rem 1.1rem;
@@ -101,14 +101,14 @@ html[data-theme="dark"] .navbar {
   transition: background-color 0.2s ease;
 }
 
-.navbar__link[href*="notifyhub.com"]:hover {
+.navbar__link[href*="notifykit.dev"]:hover {
   background-color: var(--ifm-color-primary-dark);
   color: white !important;
   text-decoration: none;
 }
 
 @media (max-width: 768px) {
-  .navbar__link[href*="notifyhub.com"] {
+  .navbar__link[href*="notifykit.dev"] {
     padding: 0.3rem 0.8rem;
     font-size: 0.9rem;
     margin-right: 10px;

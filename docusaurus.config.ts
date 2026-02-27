@@ -3,7 +3,7 @@ import type { Config } from "@docusaurus/types";
 import type * as Preset from "@docusaurus/preset-classic";
 
 const config: Config = {
-  title: "NotifyHub",
+  title: "NotifyKit",
   tagline: "Simple notification infrastructure for developers",
   favicon: "img/favicon.ico",
 
@@ -11,11 +11,11 @@ const config: Config = {
     v4: true,
   },
 
-  url: "https://docs.notifyhub.com",
+  url: "https://docs.notifykit.dev",
   baseUrl: "/",
 
-  organizationName: "notifyhub",
-  projectName: "notifyhub-docs",
+  organizationName: "notifykit",
+  projectName: "notifykit-docs",
 
   onBrokenLinks: "throw",
   onBrokenMarkdownLinks: "warn",
@@ -42,14 +42,14 @@ const config: Config = {
   ],
 
   themeConfig: {
-    image: "img/notifyhub-social-card.jpg",
+    image: "img/notifykit-social-card.jpg",
     colorMode: {
       defaultMode: "light",
       disableSwitch: false,
       respectPrefersColorScheme: true,
     },
     navbar: {
-      title: "NotifyHub",
+      title: "NotifyKit",
 
       items: [
         {
@@ -63,7 +63,7 @@ const config: Config = {
           position: "left",
         },
         {
-          href: "https://notifyhub.com",
+          href: "https://notifykit.dev",
           label: "Dashboard",
           position: "right",
         },
@@ -94,11 +94,11 @@ const config: Config = {
           items: [
             {
               label: "Dashboard",
-              href: "https://notifyhub.com",
+              href: "https://notifykit.dev",
             },
             {
               label: "Pricing",
-              href: "https://notifyhub.com/pricing",
+              href: "https://notifykit.dev/pricing",
             },
           ],
         },
@@ -107,12 +107,12 @@ const config: Config = {
           items: [
             {
               label: "GitHub",
-              href: "https://github.com/brayzonn/NotifyHub-Docs",
+              href: "https://github.com/brayzonn/NotifyKit-Docs",
             },
           ],
         },
       ],
-      copyright: `Copyright © ${new Date().getFullYear()} NotifyHub. Built with Docusaurus.`,
+      copyright: `Copyright © ${new Date().getFullYear()} NotifyKit. Built with Docusaurus.`,
     },
     prism: {
       theme: prismThemes.github,
