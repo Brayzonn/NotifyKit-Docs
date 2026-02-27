@@ -12,12 +12,12 @@ Common email template patterns.
 async function sendWelcomeEmail(user: User) {
   await client.sendEmail({
     to: user.email,
-    subject: "Welcome to NotifyHub!",
+    subject: "Welcome to NotifyKit!",
     body: `
       <div style="font-family: sans-serif; max-width: 600px;">
         <h1>Welcome ${user.name}!</h1>
         <p>Thanks for signing up. Get started by sending your first notification.</p>
-        <a href="https://notifyhub.com/docs" 
+        <a href="https://notifykit.dev/docs"
            style="background: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px;">
           View Documentation
         </a>
@@ -57,7 +57,7 @@ async function sendOrderConfirmation(order: Order) {
     body: `
       <h1>Thank you for your order!</h1>
       <p>Order #${order.id} has been confirmed.</p>
-      
+
       <h3>Items:</h3>
       <ul>
         ${order.items
@@ -68,7 +68,7 @@ async function sendOrderConfirmation(order: Order) {
           )
           .join("")}
       </ul>
-      
+
       <p><strong>Total: $${order.total}</strong></p>
       <p>Estimated delivery: ${order.estimatedDelivery}</p>
     `,
