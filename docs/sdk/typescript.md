@@ -4,37 +4,43 @@ sidebar_position: 1
 
 # TypeScript SDK
 
-Complete reference for the NotifyHub TypeScript SDK.
+Complete reference for the `@notifykit/sdk` TypeScript/Node.js client.
 
 ### Installation
 
 ```bash
-npm install @notifyhub/sdk
+npm install @notifykit/sdk
+# yarn add @notifykit/sdk
+# pnpm add @notifykit/sdk
 ```
+
+**Requirements:** Node.js 18+, TypeScript 5.0+ (optional but recommended)
 
 ### Initialization
 
 ```typescript
-import { NotifyHubClient } from "@notifyhub/sdk";
+import { NotifyKitClient } from "@notifykit/sdk";
 
-const client = new NotifyHubClient({
-  apiKey: process.env.NOTIFYHUB_API_KEY,
-  baseUrl: "https://api.notifyhub.com", // Optional
+const client = new NotifyKitClient({
+  apiKey: process.env.NOTIFYKIT_API_KEY!,
+  baseUrl: "https://api.notifykit.dev", // Optional — defaults to production
 });
 ```
 
 ### Configuration Options
 
-| Option    | Type     | Required | Description                     |
-| --------- | -------- | -------- | ------------------------------- |
-| `apiKey`  | `string` | Yes      | Your NotifyHub API key          |
-| `baseUrl` | `string` | No       | API base URL (defaults to prod) |
+| Option    | Type     | Required | Description                                           |
+| --------- | -------- | -------- | ----------------------------------------------------- |
+| `apiKey`  | `string` | Yes      | Your NotifyKit API key (`nh_...`)                     |
+| `baseUrl` | `string` | No       | API base URL. Defaults to `https://api.notifykit.dev` |
 
-### Methods
+---
 
-#### `sendEmail(options)`
+## Methods
 
-Send an email notification.
+### `sendEmail(options)`
+
+Queue an email for delivery. Returns immediately with a job ID — the email is sent asynchronously.
 
 **Parameters:**
 
@@ -43,19 +49,20 @@ interface SendEmailOptions {
   to: string; // Recipient email address
   subject: string; // Email subject line
   body: string; // Email body (HTML supported)
-  from?: string; // Sender email (requires verified domain)
-  idempotencyKey?: string; // Unique key to prevent duplicates
+  from?: string; // Sender address. Use your verified domain (e.g. support@yourdomain.com). Paid plans only.
+  priority?: 1 | 5 | 10; // Job priority: 1=high, 5=normal (default), 10=low
+  idempotencyKey?: string; // Unique key to prevent duplicate sends
 }
 ```
 
 **Returns:** `Promise<JobResponse>`
 
 ```typescript
-{
+interface JobResponse {
   jobId: string;
-  status: string;
-  type: string;
-  createdAt: string;
+  status: string; // "pending" on creation
+  type: string; // "email"
+  createdAt: string; // ISO 8601 timestamp
 }
 ```
 
@@ -66,25 +73,37 @@ const job = await client.sendEmail({
   to: "user@example.com",
   subject: "Welcome!",
   body: "<h1>Hello World</h1>",
-  idempotencyKey: "welcome-user-123", // Optional
+  priority: 1, // High priority
+  idempotencyKey: "welcome-user-123", // Prevents duplicate sends
 });
 
 console.log(job.jobId); // "job_abc123"
 ```
 
-#### `sendWebhook(options)`
+:::info Email providers by plan
 
-Send a webhook notification with automatic retries.
+- **Free:** Sent via NotifyKit's shared SendGrid account. `from` is always `noreply@notifykit.dev`.
+- **Indie / Startup:** Sent via your own SendGrid account. Connect your key in **Settings → Email Provider**. Custom `from` addresses (using your verified domain) are supported.
+
+> **Coming soon:** Resend, Mailgun, and AWS SES support.
+> :::
+
+---
+
+### `sendWebhook(options)`
+
+Queue a webhook delivery. Returns immediately with a job ID.
 
 **Parameters:**
 
 ```typescript
 interface SendWebhookOptions {
-  url: string; // Webhook endpoint URL
-  payload?: any; // JSON payload to send
-  method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE"; // HTTP method (default: POST)
-  headers?: Record<string, string>; // Custom headers
-  idempotencyKey?: string; // Unique key to prevent duplicates
+  url: string; // Webhook destination URL (must be HTTPS)
+  payload: object; // JSON payload to deliver (required)
+  method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE"; // HTTP method (default: "POST")
+  headers?: Record<string, string>; // Custom headers to include
+  priority?: 1 | 5 | 10; // Job priority: 1=high, 5=normal (default), 10=low
+  idempotencyKey?: string; // Unique key to prevent duplicate sends
 }
 ```
 
@@ -99,31 +118,39 @@ const job = await client.sendWebhook({
     event: "payment.completed",
     amount: 49.99,
   },
-  method: "POST",
   headers: {
-    Authorization: "Bearer token",
+    "X-Webhook-Secret": process.env.WEBHOOK_SECRET!,
   },
+  idempotencyKey: "payment-456-webhook",
 });
+
+console.log(job.jobId); // "job_xyz789"
 ```
 
-#### `getJob(jobId)`
+---
 
-Get the status and details of a specific job.
+### `getJob(jobId)`
+
+Get the full status and details of a specific job.
 
 **Parameters:**
 
-- `jobId` (string): The job ID
+- `jobId` (`string`) — The job ID returned from `sendEmail` or `sendWebhook`
 
-**Returns:** `Promise<JobStatus>`
+**Returns:** `Promise<JobDetails>`
 
 ```typescript
-interface JobStatus {
+interface JobDetails {
   id: string;
-  type: string;
+  type: string; // "email" or "webhook"
   status: "pending" | "processing" | "completed" | "failed";
-  attempts: number;
+  priority: number;
+  payload: object; // The original payload sent
+  attempts: number; // Number of delivery attempts made
+  maxAttempts: number; // Maximum attempts (3)
   errorMessage?: string;
   createdAt: string;
+  startedAt?: string;
   completedAt?: string;
 }
 ```
@@ -135,64 +162,104 @@ const status = await client.getJob("job_abc123");
 
 console.log(status.status); // "completed"
 console.log(status.attempts); // 1
+
+if (status.status === "failed") {
+  console.error("Delivery failed:", status.errorMessage);
+}
 ```
 
-#### `listJobs(options?)`
+---
 
-List jobs with optional filters and pagination.
+### `listJobs(options?)`
+
+List your jobs with optional filters and pagination.
 
 **Parameters:**
 
 ```typescript
 interface ListJobsOptions {
   page?: number; // Page number (default: 1)
-  limit?: number; // Jobs per page (default: 20, max: 100)
-  type?: "email" | "webhook"; // Filter by job type
+  limit?: number; // Per page (default: 20, max: 100)
+  type?: "email" | "webhook"; // Filter by notification type
   status?: "pending" | "processing" | "completed" | "failed"; // Filter by status
 }
 ```
 
-**Returns:** `Promise<{ data: JobStatus[]; pagination: any }>`
+**Returns:** `Promise<{ data: JobSummary[]; pagination: PaginationMeta }>`
+
+```typescript
+interface JobSummary {
+  id: string;
+  type: string;
+  status: "pending" | "processing" | "completed" | "failed";
+  priority: number;
+  attempts: number;
+  errorMessage?: string;
+  createdAt: string;
+  completedAt?: string;
+}
+
+interface PaginationMeta {
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+}
+```
 
 **Example:**
 
 ```typescript
 const { data, pagination } = await client.listJobs({
-  page: 1,
+  status: "failed",
+  type: "webhook",
   limit: 10,
-  type: "email",
-  status: "completed",
 });
 
-console.log(pagination.total); // 150
-console.log(pagination.totalPages); // 15
-console.log(data.length); // 10
+console.log(`${pagination.total} failed webhook jobs`);
+
+data.forEach((job) => {
+  console.log(`${job.id}: ${job.errorMessage} (${job.attempts} attempts)`);
+});
 ```
 
-#### `retryJob(jobId)`
+---
 
-Retry a failed job. Only jobs with `failed` status can be retried.
+### `retryJob(jobId)`
+
+Re-queue a failed job for another delivery attempt.
 
 **Parameters:**
 
-- `jobId` (string): The ID of the failed job
+- `jobId` (`string`) — ID of the job with `failed` status
 
-**Returns:** `Promise<JobResponse>`
+**Returns:** `Promise<RetryJobResponse>`
+
+```typescript
+interface RetryJobResponse {
+  jobId: string;
+  status: string; // "pending"
+  message: string;
+}
+```
 
 **Example:**
 
 ```typescript
-try {
-  const job = await client.retryJob("job_xyz789");
-  console.log(job.status); // "pending"
-} catch (error) {
-  // Job not found or not in failed status
-}
+const result = await client.retryJob("job_xyz789");
+console.log(result.message); // "Job has been re-queued for processing"
+console.log(result.status); // "pending"
 ```
 
-#### `ping()`
+:::info Retry eligibility
+Only jobs with `failed` status can be retried. `pending`, `processing`, and `completed` jobs cannot be retried.
+:::
 
-Test API connection.
+---
+
+### `ping()`
+
+Test API connectivity.
 
 **Returns:** `Promise<string>`
 
@@ -203,139 +270,39 @@ const pong = await client.ping();
 console.log(pong); // "pong"
 ```
 
-#### `getApiInfo()`
+---
 
-Get API information and version.
+### `getApiInfo()`
+
+Get API version and metadata.
 
 **Returns:** `Promise<ApiInfo>`
+
+```typescript
+interface ApiInfo {
+  name: string;
+  version: string;
+  description: string;
+  documentation: string;
+}
+```
 
 **Example:**
 
 ```typescript
 const info = await client.getApiInfo();
-console.log(info.name); // "NotifyHub API"
+console.log(info.name); // "NotifyKit API"
 console.log(info.version); // "1.0.0"
 ```
 
-### Domain Verification
+---
 
-#### `requestDomainVerification(domain)`
+## Error Handling
 
-Request verification for a custom sender domain.
-
-**Parameters:**
-
-- `domain` (string): The domain to verify (e.g., "yourdomain.com")
-
-**Returns:** `Promise<DomainVerificationResponse>`
+All API errors throw a `NotifyKitError`.
 
 ```typescript
-interface DomainVerificationResponse {
-  domain: string;
-  status: "pending" | "verified";
-  dnsRecords: DnsRecord[];
-  instructions: {
-    message: string;
-    steps: string[];
-    estimatedTime: string;
-  };
-}
-
-interface DnsRecord {
-  type: string;
-  host: string;
-  data: string;
-  valid: boolean;
-}
-```
-
-**Example:**
-
-```typescript
-const result = await client.requestDomainVerification("yourdomain.com");
-
-console.log(result.dnsRecords);
-// [
-//   { type: "TXT", host: "_dmarc", value: "v=DMARC1; p=none;" },
-//   { type: "CNAME", host: "em123", value: "u123.wl.sendgrid.net" }
-// ]
-```
-
-#### `verifyDomain()`
-
-Check domain verification status.
-
-**Returns:** `Promise<DomainStatusResponse>`
-
-```typescript
-interface DomainStatusResponse {
-  domain: string;
-  verified: boolean;
-  message: string;
-  validationResults?: any;
-}
-```
-
-**Example:**
-
-```typescript
-const status = await client.verifyDomain();
-
-if (status.verified) {
-  console.log("Domain verified!");
-} else {
-  console.log(status.message);
-}
-```
-
-#### `getDomainStatus()`
-
-Get current domain configuration status.
-
-**Returns:** `Promise<DomainInfoResponse>`
-
-```typescript
-interface DomainInfoResponse {
-  domain: string | null;
-  verified: boolean;
-  status: "not_configured" | "pending" | "verified";
-  dnsRecords?: any;
-  requestedAt?: string;
-  verifiedAt?: string;
-}
-```
-
-**Example:**
-
-```typescript
-const info = await client.getDomainStatus();
-
-if (info.status === "not_configured") {
-  console.log("No domain configured");
-} else if (info.status === "pending") {
-  console.log("Waiting for DNS propagation");
-}
-```
-
-#### `removeDomain()`
-
-Remove domain configuration.
-
-**Returns:** `Promise<string>` (success message)
-
-**Example:**
-
-```typescript
-const message = await client.removeDomain();
-console.log(message); // "Domain removed successfully"
-```
-
-### Error Handling
-
-The SDK throws `NotifyHubError` for API errors with helpful methods.
-
-```typescript
-import { NotifyHubError } from "@notifyhub/sdk";
+import { NotifyKitClient, NotifyKitError } from "@notifykit/sdk";
 
 try {
   await client.sendEmail({
@@ -344,96 +311,125 @@ try {
     body: "Hello",
   });
 } catch (error) {
-  if (error instanceof NotifyHubError) {
-    // Get formatted error message
+  if (error instanceof NotifyKitError) {
+    // Formatted message with status code
     console.error(error.getFullMessage());
 
-    // Check specific status codes
+    // Check specific codes
     if (error.isStatus(400)) {
-      console.error("Invalid request:", error.message);
+      console.error("Bad request:", error.message);
+    } else if (error.isStatus(401)) {
+      console.error("Invalid API key");
     } else if (error.isStatus(403)) {
-      console.error("Domain not verified");
+      // Could be: domain not verified, quota exceeded, account inactive
+      console.error("Forbidden:", error.message);
     } else if (error.isStatus(409)) {
       console.error("Duplicate idempotency key");
     } else if (error.isStatus(429)) {
       console.error("Rate limit exceeded");
     }
 
-    // Access error details
-    console.error("Status:", error.statusCode);
-    console.error("Errors:", error.errors); // Validation errors array
+    // Raw details
+    console.error("Status code:", error.statusCode);
+    console.error("Validation errors:", error.errors); // Array, if any
   }
 }
 ```
 
-#### NotifyHubError Methods
+### NotifyKitError Properties
 
-| Method             | Description                          |
-| ------------------ | ------------------------------------ |
-| `isStatus(code)`   | Check if error matches a status code |
-| `getFullMessage()` | Get formatted error with all details |
+| Property     | Type       | Description                                |
+| ------------ | ---------- | ------------------------------------------ |
+| `message`    | `string`   | Error message from the API                 |
+| `statusCode` | `number`   | HTTP status code                           |
+| `response`   | `any`      | Full raw API response                      |
+| `errors`     | `string[]` | Validation error details (400 errors only) |
 
-#### NotifyHubError Properties
+### NotifyKitError Methods
 
-| Property     | Type       | Description                |
-| ------------ | ---------- | -------------------------- |
-| `message`    | `string`   | Error message              |
-| `statusCode` | `number`   | HTTP status code           |
-| `response`   | `any`      | Full API response          |
-| `errors`     | `string[]` | Validation errors (if any) |
+| Method             | Description                                            |
+| ------------------ | ------------------------------------------------------ |
+| `isStatus(code)`   | Returns `true` if `statusCode === code`                |
+| `getFullMessage()` | Returns `[statusCode] message\nValidation errors: ...` |
 
-### TypeScript Types
+---
 
-Import types for better type safety:
+## TypeScript Types
+
+All types are exported from the package:
 
 ```typescript
 import type {
-  NotifyHubConfig,
+  NotifyKitConfig,
   SendEmailOptions,
   SendWebhookOptions,
   JobResponse,
-  JobStatus,
-  DomainVerificationResponse,
-  DomainStatusResponse,
-  DomainInfoResponse,
-  DomainVerificationRequest,
-  DnsRecord,
+  JobDetails,
+  JobSummary,
+  PaginationMeta,
   ApiInfo,
-} from "@notifyhub/sdk";
+} from "@notifykit/sdk";
 ```
 
-### Complete Example
+:::note Domain verification types
+Types like `DomainVerificationResponse`, `DomainStatusResponse`, `DomainInfoResponse`, and `DnsRecord` are exported from the package but **domain verification methods are not yet available in the SDK client**. Domain verification is currently managed through the NotifyKit dashboard (**Settings → Domain**).
+:::
+
+---
+
+## Complete Example
 
 ```typescript
-import { NotifyHubClient, NotifyHubError } from "@notifyhub/sdk";
+import { NotifyKitClient, NotifyKitError } from "@notifykit/sdk";
 
-const client = new NotifyHubClient({
-  apiKey: process.env.NOTIFYHUB_API_KEY!,
+const client = new NotifyKitClient({
+  apiKey: process.env.NOTIFYKIT_API_KEY!,
 });
 
-async function sendWelcomeEmail(userEmail: string, userName: string) {
+async function notifyUserAndSystem(
+  userId: string,
+  userEmail: string,
+  orderId: string,
+) {
   try {
-    // Send email
-    const job = await client.sendEmail({
+    // Send welcome email
+    const emailJob = await client.sendEmail({
       to: userEmail,
-      subject: `Welcome ${userName}!`,
-      body: `<h1>Hello ${userName}</h1><p>Thanks for signing up!</p>`,
-      idempotencyKey: `welcome-${userEmail}`,
+      subject: `Order #${orderId} Confirmed`,
+      body: `<h1>Thanks for your order!</h1><p>Order ID: ${orderId}</p>`,
+      priority: 1,
+      idempotencyKey: `order-${orderId}-email`,
     });
 
-    console.log(`Email queued: ${job.jobId}`);
+    console.log(`Email queued: ${emailJob.jobId}`);
 
-    // Check status
-    const status = await client.getJob(job.jobId);
-    console.log(`Status: ${status.status}`);
+    // Notify internal system via webhook
+    const webhookJob = await client.sendWebhook({
+      url: "https://internal.your-app.com/order-events",
+      payload: { event: "order.confirmed", orderId, userId },
+      headers: { "X-Internal-Secret": process.env.INTERNAL_WEBHOOK_SECRET! },
+      idempotencyKey: `order-${orderId}-webhook`,
+    });
 
-    return job;
+    console.log(`Webhook queued: ${webhookJob.jobId}`);
+
+    // Check email delivery after 10 seconds
+    setTimeout(async () => {
+      const status = await client.getJob(emailJob.jobId);
+      if (status.status === "failed") {
+        console.error(`Email delivery failed: ${status.errorMessage}`);
+        // Optionally retry
+        await client.retryJob(emailJob.jobId);
+      }
+    }, 10_000);
   } catch (error) {
-    if (error instanceof NotifyHubError) {
+    if (error instanceof NotifyKitError) {
       if (error.isStatus(409)) {
-        console.log("Email already sent to this user");
+        console.log("Already notified — idempotency key matched");
+      } else if (error.isStatus(403)) {
+        console.error("Quota or permission error:", error.message);
       } else {
-        console.error("Failed to send email:", error.getFullMessage());
+        console.error("Notification failed:", error.getFullMessage());
       }
     }
     throw error;
@@ -444,3 +440,5 @@ async function sendWelcomeEmail(userEmail: string, userName: string) {
 ### Next Steps
 
 - [Domain Verification Guide](/docs/guides/domain-verification)
+- [Retry Logic](/docs/guides/retry-logic)
+- [Webhook Security](/docs/guides/webhook-security)
