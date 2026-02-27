@@ -4,7 +4,7 @@ sidebar_position: 2
 
 # Send Email
 
-Send email notifications via SendGrid.
+Queue an email notification for delivery.
 
 ### Endpoint
 
@@ -31,18 +31,40 @@ POST /api/v1/notifications/email
 
 #### Optional Fields
 
-| Parameter        | Type     | Description                             |
-| ---------------- | -------- | --------------------------------------- |
-| `from`           | `string` | Sender email (requires verified domain) |
-| `idempotencyKey` | `string` | Unique key to prevent duplicate sends   |
+| Parameter        | Type           | Description                                                                                                                                           |
+| ---------------- | -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `from`           | `string`       | Sender email address. Use your verified domain (e.g. `support@yourdomain.com`). NotifyKit automatically rewrites it to the correct sending subdomain. |
+| `priority`       | `1 \| 5 \| 10` | Job priority (1=high, 5=normal, 10=low). Default: `5`                                                                                                 |
+| `idempotencyKey` | `string`       | Unique key to prevent duplicate sends                                                                                                                 |
+
+### Custom Sender Rules (Paid Plans)
+
+- Your domain must be verified.
+- Use your verified domain directly (e.g. `support@yourdomain.com`) — NotifyKit handles the rest.
+- If no `from` is provided, NotifyKit defaults to `noreply@em.yourdomain.com`.
+- A verified sending domain is required for all paid plan email sends — requests without one will be rejected.
+
+### Email Infrastructure by Plan
+
+:::info Free Plan
+Emails are sent via **NotifyKit's shared SendGrid account**. The sender address is always `noreply@notifykit.dev`. Custom `from` addresses are not supported.
+:::
+
+:::info Indie & Startup Plans
+Emails are sent via **your own SendGrid account**. You must connect your SendGrid API key in **Settings → Email Provider** before sending emails. Without it, email requests will be rejected.
+
+Custom `from` addresses (using your verified domain) are supported on paid plans.
+
+> **Coming soon:** Support for Resend, Mailgun, and AWS SES.
+> :::
 
 ### Examples
 
 #### Simple Email
 
 ```bash
-curl -X POST https://api.notifyhub.com/api/v1/notifications/email \
-  -H "X-API-Key: ntfy_sk_live_your_key_here" \
+curl -X POST https://api.notifykit.dev/api/v1/notifications/email \
+  -H "X-API-Key: nh_your_key_here" \
   -H "Content-Type: application/json" \
   -d '{
     "to": "user@example.com",
@@ -51,60 +73,64 @@ curl -X POST https://api.notifyhub.com/api/v1/notifications/email \
   }'
 ```
 
-#### HTML Email Template
+#### High Priority Email
 
 ```bash
-curl -X POST https://api.notifyhub.com/api/v1/notifications/email \
-  -H "X-API-Key: ntfy_sk_live_your_key_here" \
+curl -X POST https://api.notifykit.dev/api/v1/notifications/email \
+  -H "X-API-Key: nh_your_key_here" \
   -H "Content-Type: application/json" \
   -d '{
     "to": "user@example.com",
-    "subject": "Welcome!",
-    "body": "<!DOCTYPE html><html><body style=\"margin: 0; padding: 20px; font-family: Arial, sans-serif; background-color: #f4f4f4;\"><table role=\"presentation\" width=\"600\" style=\"margin: 0 auto; background-color: #ffffff; padding: 40px; border-radius: 8px;\"><tr><td style=\"text-align: center;\"><h1 style=\"color: #333; margin: 0 0 20px 0;\">Welcome John!</h1><p style=\"color: #666; font-size: 16px; line-height: 1.5; margin: 0 0 30px 0;\">Thanks for signing up. Click below to confirm your email.</p><table role=\"presentation\" style=\"margin: 0 auto;\"><tr><td style=\"background-color: #2563eb; border-radius: 4px;\"><a href=\"https://example.com/confirm?token=abc123\" style=\"display: inline-block; padding: 12px 32px; color: #ffffff; text-decoration: none; font-weight: bold;\">Confirm Email</a></td></tr></table><p style=\"color: #999; font-size: 14px; margin: 30px 0 0 0;\">© 2025 YourCompany. All rights reserved.</p></td></tr></table></body></html>"
+    "subject": "Password Reset",
+    "body": "<p>Click here to reset your password.</p>",
+    "priority": 1
   }'
 ```
 
-#### Custom From Address
+#### Custom From Address (Paid Plans Only)
 
 ```bash
-curl -X POST https://api.notifyhub.com/api/v1/notifications/email \
-  -H "X-API-Key: ntfy_sk_live_your_key_here" \
+curl -X POST https://api.notifykit.dev/api/v1/notifications/email \
+  -H "X-API-Key: nh_your_key_here" \
   -H "Content-Type: application/json" \
   -d '{
     "to": "user@example.com",
-    "from": "noreply@yourdomain.com",
+    "from": "support@yourdomain.com",
     "subject": "Newsletter",
     "body": "<h1>Monthly Update</h1>"
   }'
 ```
 
 :::info Domain Verification Required
-Custom `from` addresses require domain verification. See [Domain Verification](/docs/guides/domain-verification).
+Custom `from` addresses require a verified sender domain. See [Domain Verification](/docs/guides/domain-verification).
 :::
 
 ### Idempotent Requests
 
-Prevent duplicate emails by using an idempotency key:
+Use an `idempotencyKey` to prevent duplicate jobs if the same request is sent more than once
+(e.g., your client retries after a network timeout). If a job with the same key already exists,
+the API returns `409 Conflict` and no new job is created.
+
+To retry a **failed** job, use the [Retry Job](/docs/api-reference/jobs) endpoint instead —
+idempotency keys do not apply there.
 
 ```bash
-curl -X POST https://api.notifyhub.com/api/v1/notifications/email \
-  -H "X-API-Key: ntfy_sk_live_your_key_here" \
+curl -X POST https://api.notifykit.dev/api/v1/notifications/email \
+  -H "X-API-Key: nh_your_key_here" \
   -H "Content-Type: application/json" \
   -d '{
     "to": "user@example.com",
     "subject": "Payment Confirmation",
-    "body": "<p>Payment received</p>",
+    "body": "<p>Payment received.</p>",
     "idempotencyKey": "payment-12345"
   }'
 ```
 
-Sending again with the same `idempotencyKey` returns `409 Conflict` with the original job details.
-
 ### Response
 
-#### Success Response
+Emails are queued immediately and processed asynchronously by a background worker. The response confirms the job was accepted, not that the email was delivered. Use [Get Job Status](/docs/api-reference/jobs) to check delivery.
 
-**Status:** `200 OK`
+**Status:** `202 Accepted`
 
 ```json
 {
@@ -119,52 +145,74 @@ Sending again with the same `idempotencyKey` returns `409 Conflict` with the ori
 }
 ```
 
-#### Error Responses
+### Error Responses
 
-##### 400 Bad Request
+#### 400 Bad Request
 
-Invalid request parameters (e.g., invalid email format):
+Invalid input (e.g., invalid email format, missing required field):
 
 ```json
 {
   "success": false,
-  "error": "Invalid email address",
+  "error": "to must be an email",
   "timestamp": "2026-01-09T12:34:56.789Z"
 }
 ```
 
 #### 403 Forbidden
 
-Domain not verified (when using custom `from` address):
+Plan or domain requirements not met:
+
+**SendGrid key not configured:**
 
 ```json
 {
   "success": false,
-  "error": "Domain not verified. Please verify yourdomain.com first.",
+  "error": "Please add your SendGrid API key in Settings before sending emails.",
+  "timestamp": "2026-01-09T12:34:56.789Z"
+}
+```
+
+**No sending domain configured:**
+
+```json
+{
+  "success": false,
+  "error": "Paid plans must use a verified sending domain. Please add and verify your domain in Settings.",
+  "timestamp": "2026-01-09T12:34:56.789Z"
+}
+```
+
+**Domain pending verification:**
+
+```json
+{
+  "success": false,
+  "error": "Your sending domain is pending verification. Please complete domain verification in Settings.",
   "timestamp": "2026-01-09T12:34:56.789Z"
 }
 ```
 
 #### 409 Conflict
 
-Duplicate idempotency key:
+Duplicate `idempotencyKey` — email was already queued:
 
 ```json
 {
   "success": false,
-  "error": "Email already sent with this idempotency key",
+  "error": "Duplicate request detected",
   "timestamp": "2026-01-09T12:34:56.789Z"
 }
 ```
 
 #### 429 Too Many Requests
 
-Rate limit exceeded:
+API rate limit exceeded:
 
 ```json
 {
   "success": false,
-  "error": "Rate limit exceeded. Please try again later.",
+  "error": "Rate limit exceeded",
   "timestamp": "2026-01-09T12:34:56.789Z"
 }
 ```
@@ -173,4 +221,4 @@ Rate limit exceeded:
 
 - [Domain Verification](/docs/guides/domain-verification)
 - [Check Job Status](/docs/api-reference/jobs)
-- [Webhooks](/docs/api-reference/webhooks)
+- [Webhooks](/docs/api-reference/send-webhook)
