@@ -4,11 +4,11 @@ sidebar_position: 4
 
 # Jobs
 
-Manage and monitor notification jobs.
+Every notification you send creates a job. Jobs are processed asynchronously — the send endpoints return immediately with a job ID you can use to track delivery.
 
 ## Get Job Status
 
-Retrieve the status and details of a specific job.
+Retrieve the current status and details of a specific job.
 
 ### Endpoint
 
@@ -26,13 +26,13 @@ GET /api/v1/notifications/jobs/{jobId}
 
 | Parameter | Type     | Description |
 | --------- | -------- | ----------- |
-| `jobId`   | `string` | Job ID      |
+| `jobId`   | `string` | Job ID returned from the send endpoint |
 
 ### Example
 
 ```bash
-curl https://api.notifyhub.com/api/v1/notifications/jobs/job_abc123 \
-  -H "X-API-Key: ntfy_sk_live_your_key_here"
+curl https://api.notifykit.dev/api/v1/notifications/jobs/job_abc123 \
+  -H "X-API-Key: nh_your_key_here"
 ```
 
 ### Response
@@ -47,16 +47,17 @@ curl https://api.notifyhub.com/api/v1/notifications/jobs/job_abc123 \
     "type": "email",
     "status": "completed",
     "priority": 5,
-    "attempts": 1,
-    "maxAttempts": 3,
-    "createdAt": "2026-01-09T12:34:56.789Z",
-    "startedAt": "2026-01-09T12:34:57.123Z",
-    "completedAt": "2026-01-09T12:34:58.456Z",
     "payload": {
       "to": "user@example.com",
       "subject": "Welcome!",
       "body": "<h1>Hello</h1>"
-    }
+    },
+    "attempts": 1,
+    "maxAttempts": 3,
+    "errorMessage": null,
+    "createdAt": "2026-01-09T12:34:56.789Z",
+    "startedAt": "2026-01-09T12:34:57.123Z",
+    "completedAt": "2026-01-09T12:34:58.456Z"
   },
   "timestamp": "2026-01-09T12:35:00.000Z"
 }
@@ -64,12 +65,12 @@ curl https://api.notifyhub.com/api/v1/notifications/jobs/job_abc123 \
 
 ### Job Status Values
 
-| Status       | Description                         |
-| ------------ | ----------------------------------- |
-| `pending`    | Job queued, waiting to be processed |
-| `processing` | Job currently being processed       |
-| `completed`  | Job completed successfully          |
-| `failed`     | Job failed after all retry attempts |
+| Status       | Description                                      |
+| ------------ | ------------------------------------------------ |
+| `pending`    | Job is queued, waiting to be picked up           |
+| `processing` | Job is actively being processed by a worker      |
+| `completed`  | Job delivered successfully                        |
+| `failed`     | Job exhausted all retry attempts without success |
 
 ### Error Response
 
@@ -83,9 +84,11 @@ curl https://api.notifyhub.com/api/v1/notifications/jobs/job_abc123 \
 }
 ```
 
+---
+
 ## List Jobs
 
-Retrieve a paginated list of jobs with optional filters.
+Retrieve a paginated list of your jobs with optional filters.
 
 ### Endpoint
 
@@ -101,48 +104,48 @@ GET /api/v1/notifications/jobs
 
 ### Query Parameters
 
-| Parameter | Type     | Description                                                         | Default |
-| --------- | -------- | ------------------------------------------------------------------- | ------- |
-| `page`    | `number` | Page number                                                         | `1`     |
-| `limit`   | `number` | Jobs per page (max: 100)                                            | `20`    |
-| `type`    | `string` | Filter by job type: `email` or `webhook`                            | -       |
-| `status`  | `string` | Filter by status: `pending`, `processing`, `completed`, or `failed` | -       |
+| Parameter | Type     | Description                                                              | Default |
+| --------- | -------- | ------------------------------------------------------------------------ | ------- |
+| `page`    | `number` | Page number                                                              | `1`     |
+| `limit`   | `number` | Jobs per page (max: 100)                                                 | `20`    |
+| `type`    | `string` | Filter by type: `email` or `webhook`                                     | —       |
+| `status`  | `string` | Filter by status: `pending`, `processing`, `completed`, or `failed`      | —       |
 
 ### Examples
 
 #### List All Jobs
 
 ```bash
-curl https://api.notifyhub.com/api/v1/notifications/jobs \
-  -H "X-API-Key: ntfy_sk_live_your_key_here"
+curl https://api.notifykit.dev/api/v1/notifications/jobs \
+  -H "X-API-Key: nh_your_key_here"
 ```
 
 #### Filter by Type
 
 ```bash
-curl "https://api.notifyhub.com/api/v1/notifications/jobs?type=email" \
-  -H "X-API-Key: ntfy_sk_live_your_key_here"
+curl "https://api.notifykit.dev/api/v1/notifications/jobs?type=email" \
+  -H "X-API-Key: nh_your_key_here"
 ```
 
-#### Filter by Status
+#### Filter Failed Jobs
 
 ```bash
-curl "https://api.notifyhub.com/api/v1/notifications/jobs?status=failed" \
-  -H "X-API-Key: ntfy_sk_live_your_key_here"
+curl "https://api.notifykit.dev/api/v1/notifications/jobs?status=failed" \
+  -H "X-API-Key: nh_your_key_here"
 ```
 
 #### Pagination
 
 ```bash
-curl "https://api.notifyhub.com/api/v1/notifications/jobs?page=2&limit=50" \
-  -H "X-API-Key: ntfy_sk_live_your_key_here"
+curl "https://api.notifykit.dev/api/v1/notifications/jobs?page=2&limit=50" \
+  -H "X-API-Key: nh_your_key_here"
 ```
 
 #### Combined Filters
 
 ```bash
-curl "https://api.notifyhub.com/api/v1/notifications/jobs?type=webhook&status=completed&page=1&limit=10" \
-  -H "X-API-Key: ntfy_sk_live_your_key_here"
+curl "https://api.notifykit.dev/api/v1/notifications/jobs?type=webhook&status=failed&page=1&limit=10" \
+  -H "X-API-Key: nh_your_key_here"
 ```
 
 ### Response
@@ -158,7 +161,9 @@ curl "https://api.notifyhub.com/api/v1/notifications/jobs?type=webhook&status=co
         "id": "job_abc123",
         "type": "email",
         "status": "completed",
+        "priority": 5,
         "attempts": 1,
+        "errorMessage": null,
         "createdAt": "2026-01-09T12:34:56.789Z",
         "completedAt": "2026-01-09T12:34:58.456Z"
       },
@@ -166,9 +171,11 @@ curl "https://api.notifyhub.com/api/v1/notifications/jobs?type=webhook&status=co
         "id": "job_xyz789",
         "type": "webhook",
         "status": "failed",
+        "priority": 5,
         "attempts": 3,
         "errorMessage": "Connection timeout",
-        "createdAt": "2026-01-09T12:30:00.000Z"
+        "createdAt": "2026-01-09T12:30:00.000Z",
+        "completedAt": null
       }
     ],
     "pagination": {
@@ -182,9 +189,15 @@ curl "https://api.notifyhub.com/api/v1/notifications/jobs?type=webhook&status=co
 }
 ```
 
+:::note
+The list response does not include `payload`, `startedAt`, or `maxAttempts`. Use [Get Job Status](#get-job-status) for the full job record.
+:::
+
+---
+
 ## Retry Failed Job
 
-Retry a failed job. Only jobs with `failed` status can be retried.
+Re-queue a failed job for another delivery attempt. Only jobs with `failed` status can be retried.
 
 ### Endpoint
 
@@ -202,13 +215,13 @@ POST /api/v1/notifications/jobs/{jobId}/retry
 
 | Parameter | Type     | Description      |
 | --------- | -------- | ---------------- |
-| `jobId`   | `string` | ID of failed job |
+| `jobId`   | `string` | ID of the failed job |
 
 ### Example
 
 ```bash
-curl -X POST https://api.notifyhub.com/api/v1/notifications/jobs/job_xyz789/retry \
-  -H "X-API-Key: ntfy_sk_live_your_key_here"
+curl -X POST https://api.notifykit.dev/api/v1/notifications/jobs/job_xyz789/retry \
+  -H "X-API-Key: nh_your_key_here"
 ```
 
 ### Response
@@ -221,8 +234,7 @@ curl -X POST https://api.notifyhub.com/api/v1/notifications/jobs/job_xyz789/retr
   "data": {
     "jobId": "job_xyz789",
     "status": "pending",
-    "type": "webhook",
-    "createdAt": "2026-01-09T12:35:00.000Z"
+    "message": "Job has been re-queued for processing"
   },
   "timestamp": "2026-01-09T12:35:00.000Z"
 }
@@ -232,7 +244,7 @@ curl -X POST https://api.notifyhub.com/api/v1/notifications/jobs/job_xyz789/retr
 
 #### 404 Not Found
 
-Job doesn't exist or cannot be retried:
+Job doesn't exist or is not in `failed` status:
 
 ```json
 {
@@ -242,6 +254,18 @@ Job doesn't exist or cannot be retried:
 }
 ```
 
-:::info Retry Limitations
+#### 400 Bad Request
+
+Retrying a failed email job without a SendGrid key configured (Indie/Startup plans):
+
+```json
+{
+  "success": false,
+  "error": "Please add your SendGrid API key in settings before sending emails.",
+  "timestamp": "2026-01-09T12:35:00.000Z"
+}
+```
+
+:::info Retry Eligibility
 Only jobs with `failed` status can be retried. Jobs that are `pending`, `processing`, or `completed` cannot be retried.
 :::
