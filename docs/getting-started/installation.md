@@ -4,11 +4,11 @@ sidebar_position: 1
 
 # Installation
 
-Get started with NotifyHub in minutes.
+Get started with NotifyKit in minutes.
 
 ### Sign Up
 
-1. Visit [notifyhub.com](https://notifyhub.com)
+1. Visit [notifykit.dev](https://notifykit.dev)
 2. Create an account
 3. Get your API key from the dashboard
 
@@ -17,19 +17,19 @@ Get started with NotifyHub in minutes.
 #### npm
 
 ```bash
-npm install @notifyhub/sdk
+npm install @notifykit/sdk
 ```
 
 #### yarn
 
 ```bash
-yarn add @notifyhub/sdk
+yarn add @notifykit/sdk
 ```
 
 #### pnpm
 
 ```bash
-pnpm add @notifyhub/sdk
+pnpm add @notifykit/sdk
 ```
 
 ### Requirements
@@ -42,9 +42,9 @@ pnpm add @notifyhub/sdk
 Create a test file:
 
 ```typescript
-import { NotifyHubClient } from "@notifyhub/sdk";
+import { NotifyKitClient } from "@notifykit/sdk";
 
-const client = new NotifyHubClient({
+const client = new NotifyKitClient({
   apiKey: "your-api-key",
 });
 
