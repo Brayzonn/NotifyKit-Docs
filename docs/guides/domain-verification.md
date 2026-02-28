@@ -187,10 +187,6 @@ curl -X POST https://api.notifykit.dev/api/v1/notifications/email \
 }
 ```
 
-## Removing a Domain
-
-To remove your current verified domain (so you can add a different one), go to **Settings → Domain** and click **Remove Domain**. Emails will revert to sending from `noreply@notifykit.dev` immediately.
-
 ## DMARC (Optional but Recommended)
 
 Add a DMARC record to your DNS to improve deliverability and get reports on authentication failures:
