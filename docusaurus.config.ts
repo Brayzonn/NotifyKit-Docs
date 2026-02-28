@@ -5,7 +5,72 @@ import type * as Preset from "@docusaurus/preset-classic";
 const config: Config = {
   title: "NotifyKit",
   tagline: "Simple notification infrastructure for developers",
-  favicon: "img/favicon.ico",
+  favicon: "favicon.ico",
+
+  headTags: [
+    {
+      tagName: "link",
+      attributes: {
+        rel: "icon",
+        type: "image/x-icon",
+        href: "/favicon.ico",
+      },
+    },
+    {
+      tagName: "link",
+      attributes: {
+        rel: "icon",
+        type: "image/png",
+        sizes: "16x16",
+        href: "/favicon-16x16.png",
+      },
+    },
+    {
+      tagName: "link",
+      attributes: {
+        rel: "icon",
+        type: "image/png",
+        sizes: "32x32",
+        href: "/favicon-32x32.png",
+      },
+    },
+    {
+      tagName: "link",
+      attributes: {
+        rel: "apple-touch-icon",
+        sizes: "180x180",
+        href: "/apple-touch-icon.png",
+      },
+    },
+    {
+      tagName: "link",
+      attributes: {
+        rel: "manifest",
+        href: "/site.webmanifest",
+      },
+    },
+    {
+      tagName: "meta",
+      attributes: {
+        name: "theme-color",
+        content: "#ffffff",
+      },
+    },
+    {
+      tagName: "meta",
+      attributes: {
+        name: "mobile-web-app-capable",
+        content: "yes",
+      },
+    },
+    {
+      tagName: "meta",
+      attributes: {
+        name: "apple-mobile-web-app-status-bar-style",
+        content: "default",
+      },
+    },
+  ],
 
   future: {
     v4: true,

@@ -28,7 +28,7 @@ const sidebars: SidebarsConfig = {
     {
       type: "category",
       label: "Guides",
-      items: ["guides/domain-verification"],
+      items: ["guides/domain-verification", "guides/retry-logic", "guides/webhook-security"],
     },
     {
       type: "category",
