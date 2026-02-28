@@ -69,7 +69,7 @@ Returning `401` for invalid secrets will stop NotifyKit from retrying (4xx respo
 
 Always use HTTPS for your webhook URL. HTTP sends your payload in plaintext, exposing the payload contents and any secret headers to anyone who can observe the network traffic.
 
-NotifyKit accepts both HTTP and HTTPS URLs, but HTTPS is strongly recommended for production use.
+NotifyKit only accepts HTTPS webhook URLs. HTTP URLs are rejected at the API level with a `400` error.
 
 ## Keep Secrets Out of Payloads
 
@@ -83,8 +83,8 @@ await client.sendWebhook({
   url: "https://your-app.com/webhook",
   payload: {
     userId: "123",
-    creditCard: "4111111111111111",  // Bad
-    apiToken: "sk_live_abc123",      // Bad
+    creditCard: "4111111111111111", // Bad
+    apiToken: "sk_live_abc123", // Bad
   },
 });
 ```
@@ -97,7 +97,7 @@ await client.sendWebhook({
   url: "https://your-app.com/webhook",
   payload: {
     event: "payment.completed",
-    paymentId: "pay_abc123",  // Fetch payment details from your own API
+    paymentId: "pay_abc123", // Fetch payment details from your own API
   },
 });
 ```
@@ -161,14 +161,14 @@ app.post("/webhooks/orders", async (req, res) => {
 
 ## Best Practices Summary
 
-| Practice | Why |
-| -------- | --- |
-| Use a shared secret header | Prevents unauthorized calls to your endpoint |
-| Use HTTPS | Encrypts payload and headers in transit |
-| Make endpoints idempotent | Handles duplicate deliveries safely |
-| Respond with 200 quickly | Prevents unnecessary retries |
-| Don't include secrets in payloads | Payload content is visible in delivery logs |
-| Send identifiers, not raw data | Keeps sensitive data in your own system |
+| Practice                          | Why                                          |
+| --------------------------------- | -------------------------------------------- |
+| Use a shared secret header        | Prevents unauthorized calls to your endpoint |
+| Use HTTPS                         | Encrypts payload and headers in transit      |
+| Make endpoints idempotent         | Handles duplicate deliveries safely          |
+| Respond with 200 quickly          | Prevents unnecessary retries                 |
+| Don't include secrets in payloads | Payload content is visible in delivery logs  |
+| Send identifiers, not raw data    | Keeps sensitive data in your own system      |
 
 ## Next Steps
 
