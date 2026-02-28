@@ -96,9 +96,9 @@ You can manually re-queue any job with `failed` status:
 
 ```typescript
 try {
-  await client.retryJob("job_xyz789");
-  console.log(result.message);
-  console.log(result.status);
+  const result = await client.retryJob("job_xyz789");
+  console.log(result.message); // "Job has been re-queued for processing"
+  console.log(result.status); // "pending"
 } catch (error) {
   if (error instanceof NotifyKitError && error.isStatus(404)) {
     console.error("Job not found or not in failed status");
