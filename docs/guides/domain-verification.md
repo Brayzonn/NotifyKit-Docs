@@ -4,7 +4,7 @@ sidebar_position: 1
 
 # Domain Verification
 
-Verify a custom sender domain to send emails from your own address (e.g., `support@em.yourapp.com`) instead of NotifyKit's default `noreply@notifykit.dev`.
+Verify a custom sender domain to send emails from your own address (e.g., `support@yourdomain.com`) instead of NotifyKit's default `noreply@notifykit.dev`.
 
 ## Requirements
 
@@ -16,7 +16,7 @@ Custom domain verification is available on **Indie** and **Startup** plans only.
 Domain verification currently uses **SendGrid**. You must have your SendGrid API key connected in **Settings → Email Provider** before requesting domain verification.
 
 > **Coming soon:** Support for Resend, Mailgun, and AWS SES.
-:::
+> :::
 
 :::warning One Domain Per Account
 You can only verify **one domain** per account at a time. To switch to a different domain, remove the existing one first.
@@ -25,6 +25,8 @@ You can only verify **one domain** per account at a time. To switch to a differe
 ## How It Works
 
 NotifyKit registers your domain with SendGrid and generates three CNAME DNS records. Once you add those records to your DNS provider, you trigger verification. If DNS has propagated correctly, your domain becomes active for sending.
+
+When you send an email with a `from` address on your verified domain, NotifyKit automatically rewrites it to the correct sending subdomain internally. You just use your domain as-is.
 
 ## Step 1: Request Verification
 
@@ -48,11 +50,11 @@ Value: s2.domainkey.u12345678.wl123.sendgrid.net
 
 **What each record does:**
 
-| Record | Purpose |
-| ------ | ------- |
-| `em####.yourdomain.com` | Routes email through SendGrid's infrastructure |
-| `s1._domainkey.yourdomain.com` | DKIM signature — proves emails are from you |
-| `s2._domainkey.yourdomain.com` | Backup DKIM signature |
+| Record                         | Purpose                                        |
+| ------------------------------ | ---------------------------------------------- |
+| `em####.yourdomain.com`        | Routes email through SendGrid's infrastructure |
+| `s1._domainkey.yourdomain.com` | DKIM signature — proves emails are from you    |
+| `s2._domainkey.yourdomain.com` | Backup DKIM signature                          |
 
 ## Step 2: Add DNS Records
 
@@ -103,32 +105,37 @@ If the dig returns no result or a wrong value, the record hasn't propagated or w
 
 **Common issues:**
 
-| Issue | Fix |
-| ----- | --- |
-| Proxy enabled (Cloudflare) | Disable proxy — use "DNS only" |
+| Issue                         | Fix                                                                                  |
+| ----------------------------- | ------------------------------------------------------------------------------------ |
+| Proxy enabled (Cloudflare)    | Disable proxy — use "DNS only"                                                       |
 | Full hostname entered as Host | Some providers need just the subdomain (e.g., `em8724`), not `em8724.yourdomain.com` |
-| Old records conflict | Delete any existing records for the same hostname first |
-| TTL too high | Lower to 300 seconds (5 min) for faster propagation |
+| Old records conflict          | Delete any existing records for the same hostname first                              |
+| TTL too high                  | Lower to 300 seconds (5 min) for faster propagation                                  |
 
 ## Step 4: Send from Your Domain
 
-Once verified, emails automatically use `noreply@em.yourdomain.com` as the default sender (when you don't specify `from`).
+Once verified, paid plan emails automatically use `noreply@em.yourdomain.com` as the default sender when you don't specify a `from` address. If you do specify `from`, use your verified domain directly — NotifyKit handles the rest.
+
+:::warning Domain Required for Paid Plans
+A verified sending domain is required for all paid plan email sends. Requests without a verified domain will be rejected with a `403` error.
+:::
 
 ### Automatic From Address
 
-| Domain status   | Default sender                     |
-| --------------- | ---------------------------------- |
-| Verified        | `noreply@em.yourdomain.com`        |
-| Not verified    | `noreply@notifykit.dev`            |
+| Plan            | Domain status | Default sender              |
+| --------------- | ------------- | --------------------------- |
+| Free            | Any           | `noreply@notifykit.dev`     |
+| Indie / Startup | Verified      | `noreply@em.yourdomain.com` |
+| Indie / Startup | Not verified  | Request rejected            |
 
 ### Specifying a Custom Sender
 
-You can send from any address on the `em.` subdomain of your verified domain:
+Use your verified domain directly in the `from` field — NotifyKit automatically rewrites it to the correct sending subdomain:
 
 ```typescript
 await client.sendEmail({
   to: "user@example.com",
-  from: "support@em.yourdomain.com",
+  from: "support@yourdomain.com",
   subject: "We got your ticket",
   body: "We'll get back to you within 24 hours.",
 });
@@ -140,50 +147,44 @@ curl -X POST https://api.notifykit.dev/api/v1/notifications/email \
   -H "Content-Type: application/json" \
   -d '{
     "to": "user@example.com",
-    "from": "orders@em.yourdomain.com",
+    "from": "orders@yourdomain.com",
     "subject": "Order Shipped",
     "body": "<p>Your order is on the way!</p>"
   }'
 ```
 
-### The `em.` Subdomain Requirement
-
-:::warning Use `em.yourdomain.com`, not `yourdomain.com`
-The DNS verification creates records on the `em.` subdomain. Emails must be sent from addresses on that subdomain.
-
-- **Correct:** `support@em.yourdomain.com`
-- **Incorrect:** `support@yourdomain.com` (will be rejected)
-:::
-
-**Why use a subdomain?**
-
-Using `em.yourdomain.com` for transactional emails keeps your sending reputation separate from your main domain. If a transactional email campaign causes spam complaints, it doesn't affect the deliverability of emails sent from `team@yourdomain.com`.
-
-**What recipients see:**
-
-Most email clients display the sender as `yourdomain.com`, so recipients see the email as coming from your brand.
-
 ### Common Errors
 
-**Using root domain instead of `em.` subdomain:**
+**No sending domain configured:**
 
-```
-Error: Cannot send from support@yourdomain.com.
-Use em.yourdomain.com instead (e.g., support@em.yourdomain.com)
+```json
+{
+  "error": "Paid plans must use a verified sending domain. Please add and verify your domain in Settings."
+}
 ```
 
-**Domain not yet verified:**
+**Domain pending verification:**
 
+```json
+{
+  "error": "Your sending domain is pending verification. Please complete domain verification in Settings."
+}
 ```
-Error: Cannot send from noreply@em.yourdomain.com.
-Domain yourdomain.com is not verified.
+
+**Using an unrecognized domain in `from`:**
+
+```json
+{
+  "error": "Cannot send from support@otherdomain.com. Use your verified domain yourdomain.com instead."
+}
 ```
 
 **Trying to use an unauthorized NotifyKit address:**
 
-```
-Error: Cannot send from custom@notifykit.dev.
-Only noreply@notifykit.dev is allowed for the NotifyKit domain.
+```json
+{
+  "error": "Cannot send from custom@notifykit.dev. Only noreply@notifykit.dev is allowed."
+}
 ```
 
 ## Removing a Domain
