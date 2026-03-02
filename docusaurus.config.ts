@@ -115,7 +115,6 @@ const config: Config = {
     },
     navbar: {
       title: "NotifyKit",
-
       items: [
         {
           label: "REST API",

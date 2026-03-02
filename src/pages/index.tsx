@@ -55,7 +55,7 @@ export default function Home() {
               <div className="col col--4">
                 <div className="feature-card">
                   <h3>Affordable</h3>
-                  <p>Simple pricing starting at $9.99/month. No hidden fees.</p>
+                  <p>Simple pricing. No hidden fees.</p>
                 </div>
               </div>
             </div>
