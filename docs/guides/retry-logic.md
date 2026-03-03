@@ -147,6 +147,55 @@ For webhook endpoints that receive NotifyKit deliveries:
 3. **Return 200 for known bad payloads** — If the payload is malformed but expected, return 200 to prevent retries. Log the issue separately.
 4. **Use HTTPS** — Ensures the payload is encrypted in transit.
 
+## Handling API Rate Limits
+
+If you exceed the rate limit for an endpoint, the API returns `429 Too Many Requests`:
+
+```json
+{
+  "success": false,
+  "error": "Too many requests",
+  "retryAfter": 60,
+  "timestamp": "2026-03-03T12:00:00.000Z"
+}
+```
+
+The response also includes a `Retry-After` header with the same value in seconds.
+
+### With the SDK
+
+`NotifyKitError` exposes a `retryAfter` property on 429 errors:
+
+```typescript
+import { NotifyKitError } from 'notifykit-sdk';
+
+try {
+  await client.sendEmail({ to: '...', subject: '...', body: '...' });
+} catch (error) {
+  if (error instanceof NotifyKitError && error.isStatus(429)) {
+    const wait = error.retryAfter ?? 60;
+    console.log(`Rate limited. Retry in ${wait}s`);
+    await new Promise((resolve) => setTimeout(resolve, wait * 1000));
+    // retry...
+  }
+}
+```
+
+### With the REST API
+
+Read the `Retry-After` response header:
+
+```bash
+HTTP/1.1 429 Too Many Requests
+Retry-After: 60
+```
+
+Wait the indicated number of seconds before retrying the request.
+
+:::info Plan limits
+Rate limits on notification endpoints (`/notifications/*`) are per-plan. If you consistently hit limits, consider upgrading your plan. See [Authentication](/docs/api-reference/authentication) for the full rate limit table.
+:::
+
 ## Next Steps
 
 - [Webhook Security](/docs/guides/webhook-security)
