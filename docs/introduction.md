@@ -24,9 +24,7 @@ It's a focused alternative for teams that don't need the full complexity of an e
 
 ### What NotifyKit Sends
 
-**Emails** — Send transactional emails via SendGrid. On the Free plan, emails go through NotifyKit's shared SendGrid infrastructure. On paid plans, you connect your own SendGrid API key (BYOK — bring your own key), giving you full control over deliverability, sender reputation, and sending limits.
-
-> **Coming soon:** Support for Resend, Mailgun, and AWS SES.
+**Emails** — Send transactional emails via **SendGrid** or **Resend**. On the Free plan, emails go through NotifyKit's shared infrastructure (SendGrid with Resend as automatic fallback). On paid plans, you connect your own API key from either provider (BYOK — bring your own key), giving you full control over deliverability, sender reputation, and sending limits. You can configure both providers simultaneously — NotifyKit delivers through them in priority order and falls back automatically on failure.
 
 **Webhooks** — Deliver HTTP callbacks to any endpoint, with configurable HTTP method, custom headers, and automatic exponential backoff retries on failure.
 
@@ -35,8 +33,8 @@ It's a focused alternative for teams that don't need the full complexity of an e
 | Plan    | Price     | Monthly Limit     | Emails                            |
 | ------- | --------- | ----------------- | --------------------------------- |
 | Free    | $0        | 100 notifications | Shared with webhook quota         |
-| Indie   | $9/month  | 4,000 webhooks    | Unlimited (via your SendGrid key) |
-| Startup | $30/month | 15,000 webhooks   | Unlimited (via your SendGrid key) |
+| Indie   | $9/month  | 4,000 webhooks    | Unlimited (via your SendGrid or Resend key) |
+| Startup | $30/month | 15,000 webhooks   | Unlimited (via your SendGrid or Resend key) |
 
 On the Free plan, every notification (email or webhook) counts toward a single 100/month limit. On paid plans, emails are unlimited and only webhooks count toward the monthly quota.
 

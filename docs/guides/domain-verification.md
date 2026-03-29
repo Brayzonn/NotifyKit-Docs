@@ -13,10 +13,8 @@ Custom domain verification is available on **Indie** and **Startup** plans only.
 :::
 
 :::info Email Provider
-Domain verification currently uses **SendGrid**. You must have your SendGrid API key connected in **Settings → Email Provider** before requesting domain verification.
-
-> **Coming soon:** Support for Resend, Mailgun, and AWS SES.
-> :::
+Domain verification registers your domain with each email provider you have configured. To verify a domain, you must have at least one provider API key (SendGrid or Resend) connected in **Settings → Email Providers**.
+:::
 
 :::warning One Domain Per Account
 You can only verify **one domain** per account at a time. To switch to a different domain, remove the existing one first.
@@ -24,15 +22,17 @@ You can only verify **one domain** per account at a time. To switch to a differe
 
 ## How It Works
 
-NotifyKit registers your domain with SendGrid and generates three CNAME DNS records. Once you add those records to your DNS provider, you trigger verification. If DNS has propagated correctly, your domain becomes active for sending.
+NotifyKit registers your domain with every email provider you have configured and generates DNS records for each. Once you add those records to your DNS provider, you trigger verification. When all providers confirm your domain, it becomes active for sending.
 
-When you send an email with a `from` address on your verified domain, NotifyKit automatically rewrites it to the correct sending subdomain internally. You just use your domain as-is.
+If you have both SendGrid and Resend configured, you will receive DNS records from both providers. All records must be added — NotifyKit delivers through providers in priority order and falls back automatically if one fails.
 
 ## Step 1: Request Verification
 
 Go to **Settings → Domain** in the NotifyKit dashboard and enter your domain name.
 
-You'll receive three CNAME records that look like:
+You'll receive CNAME records for each configured provider. For example, with both SendGrid and Resend configured:
+
+**SendGrid records:**
 
 ```
 Type: CNAME
@@ -48,17 +48,26 @@ Host: s2._domainkey.yourdomain.com
 Value: s2.domainkey.u12345678.wl123.sendgrid.net
 ```
 
+**Resend records:**
+
+```
+Type: CNAME
+Host: resend._domainkey.yourdomain.com
+Value: p.bymail.in
+```
+
 **What each record does:**
 
-| Record                         | Purpose                                        |
-| ------------------------------ | ---------------------------------------------- |
-| `em####.yourdomain.com`        | Routes email through SendGrid's infrastructure |
-| `s1._domainkey.yourdomain.com` | DKIM signature — proves emails are from you    |
-| `s2._domainkey.yourdomain.com` | Backup DKIM signature                          |
+| Record                              | Provider  | Purpose                                     |
+| ----------------------------------- | --------- | ------------------------------------------- |
+| `em####.yourdomain.com`             | SendGrid  | Routes email through SendGrid infrastructure |
+| `s1._domainkey.yourdomain.com`      | SendGrid  | DKIM signature — proves emails are from you  |
+| `s2._domainkey.yourdomain.com`      | SendGrid  | Backup DKIM signature                        |
+| `resend._domainkey.yourdomain.com`  | Resend    | DKIM signature for Resend                    |
 
 ## Step 2: Add DNS Records
 
-Log in to your DNS provider and add all three CNAME records.
+Log in to your DNS provider and add all records shown in the dashboard.
 
 ### Cloudflare
 
@@ -66,9 +75,9 @@ Log in to your DNS provider and add all three CNAME records.
 2. Click **Add record**
 3. Type: `CNAME`
 4. Name: the `Host` value (e.g., `em8724`)
-5. Target: the `Value` (e.g., `u12345678.wl123.sendgrid.net`)
+5. Target: the `Value`
 6. **Proxy status: DNS only** (gray cloud — do not proxy)
-7. Repeat for all three records
+7. Repeat for all records
 
 ### Namecheap
 
@@ -87,34 +96,32 @@ Most DNS providers have the same fields under different names (e.g., "Alias", "D
 
 DNS propagation typically takes 15–60 minutes, but can take up to 24 hours.
 
-Once you've added the records and waited for propagation, go to **Settings → Domain** and click **Verify Domain**.
+Once you've added all records and waited for propagation, go to **Settings → Domain** and click **Verify Domain**.
 
-If all three records resolve correctly, your domain status changes to `verified`.
+Your domain is considered verified when **all configured providers** confirm it. If you have both SendGrid and Resend, both must pass.
 
 **Troubleshooting:**
 
 ```bash
-# Check if your CNAME record is visible
+# Check if a CNAME record is visible
 dig em8724.yourdomain.com CNAME
 
 # Expected output:
 # em8724.yourdomain.com. 300 IN CNAME u12345678.wl123.sendgrid.net.
 ```
 
-If the dig returns no result or a wrong value, the record hasn't propagated or was entered incorrectly.
-
 **Common issues:**
 
-| Issue                         | Fix                                                                                  |
-| ----------------------------- | ------------------------------------------------------------------------------------ |
-| Proxy enabled (Cloudflare)    | Disable proxy — use "DNS only"                                                       |
-| Full hostname entered as Host | Some providers need just the subdomain (e.g., `em8724`), not `em8724.yourdomain.com` |
-| Old records conflict          | Delete any existing records for the same hostname first                              |
-| TTL too high                  | Lower to 300 seconds (5 min) for faster propagation                                  |
+| Issue                          | Fix                                                                                   |
+| ------------------------------ | ------------------------------------------------------------------------------------- |
+| Proxy enabled (Cloudflare)     | Disable proxy — use "DNS only"                                                        |
+| Full hostname entered as Host  | Some providers need just the subdomain (e.g., `em8724`), not `em8724.yourdomain.com` |
+| Old records conflict           | Delete any existing records for the same hostname first                               |
+| TTL too high                   | Lower to 300 seconds (5 min) for faster propagation                                   |
 
 ## Step 4: Send from Your Domain
 
-Once verified, paid plan emails automatically use `noreply@em.yourdomain.com` as the default sender when you don't specify a `from` address. If you do specify `from`, use your verified domain directly — NotifyKit handles the rest.
+Once verified, paid plan emails automatically use `noreply@em.yourdomain.com` as the default sender when you don't specify a `from` address.
 
 :::warning Domain Required for Paid Plans
 A verified sending domain is required for all paid plan email sends. Requests without a verified domain will be rejected with a `403` error.

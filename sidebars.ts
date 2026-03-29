@@ -35,6 +35,7 @@ const sidebars: SidebarsConfig = {
       label: "Examples",
       items: ["examples/email-templates"],
     },
+    "changelog",
   ],
 };
 
