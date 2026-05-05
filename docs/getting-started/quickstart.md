@@ -30,8 +30,8 @@ console.log("Email queued:", job.jobId);
 ```
 
 :::info Free vs. paid plan emails
-On the **Free plan**, emails send from `noreply@notifykit.dev` via NotifyKit's shared infrastructure.
-On **Indie/Startup** plans, connect your own SendGrid API key in **Settings → Email Provider** first.
+On the **Free plan**, emails send from `noreply@notifykit.dev` via NotifyKit's shared infrastructure (SendGrid, Resend, and Postmark with automatic failover).
+On **Indie/Startup** plans, connect at least one provider API key (SendGrid, Resend, or Postmark) in **Settings → API Keys** first. Multiple providers can be configured for failover.
 :::
 
 ### Send a Webhook

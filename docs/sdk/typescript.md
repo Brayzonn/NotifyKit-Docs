@@ -45,6 +45,8 @@ Queue an email for delivery. Returns immediately with a job ID — the email is 
 **Parameters:**
 
 ```typescript
+type EmailProvider = "SENDGRID" | "RESEND" | "POSTMARK";
+
 interface SendEmailOptions {
   to: string; // Recipient email address
   subject: string; // Email subject line
@@ -52,6 +54,8 @@ interface SendEmailOptions {
   from?: string; // Sender address. Use your verified domain (e.g. support@yourdomain.com). Paid plans only.
   priority?: 1 | 5 | 10; // Job priority: 1=high, 5=normal (default), 10=low
   idempotencyKey?: string; // Unique key to prevent duplicate sends
+  provider?: EmailProvider; // Force this email through a specific provider. Paid plans only.
+  fallback?: EmailProvider; // Second provider tried only if `provider` fails. Requires `provider`.
 }
 ```
 
@@ -82,11 +86,23 @@ console.log(job.jobId); // "job_abc123"
 
 :::info Email providers by plan
 
-- **Free:** Sent via NotifyKit's shared SendGrid account. `from` is always `noreply@notifykit.dev`.
-- **Indie / Startup:** Sent via your own SendGrid account. Connect your key in **Settings → Email Provider**. Custom `from` addresses (using your verified domain) are supported.
+- **Free:** Sent via NotifyKit's shared infrastructure (SendGrid, Resend, and Postmark with automatic failover). `from` is always `noreply@notifykit.dev`.
+- **Indie / Startup:** Sent via your own provider keys. Connect SendGrid, Resend, and/or Postmark in **Settings → API Keys**. Custom `from` addresses (using your verified domain) are supported.
+  :::
 
-> **Coming soon:** Resend, Mailgun, and AWS SES support.
-> :::
+:::note Per-message provider routing
+Paid plans can force a single email through a specific provider by passing `provider` (and optionally `fallback`) on `sendEmail()`. Available since SDK **1.1.0**. See [Per-Message Provider Routing](/docs/api-reference/send-email#per-message-provider-routing-paid-plans).
+
+```typescript
+await client.sendEmail({
+  to: "user@example.com",
+  subject: "Receipt",
+  body: "<h1>Thanks</h1>",
+  provider: "SENDGRID",
+  fallback: "RESEND", // optional; requires provider
+});
+```
+:::
 
 ---
 
@@ -137,10 +153,10 @@ Get the full status and details of a specific job.
 
 - `jobId` (`string`) — The job ID returned from `sendEmail` or `sendWebhook`
 
-**Returns:** `Promise<JobDetails>`
+**Returns:** `Promise<JobStatus>`
 
 ```typescript
-interface JobDetails {
+interface JobStatus {
   id: string;
   type: string; // "email" or "webhook"
   status: "pending" | "processing" | "completed" | "failed";
@@ -152,6 +168,18 @@ interface JobDetails {
   createdAt: string;
   startedAt?: string;
   completedAt?: string;
+  deliveryLogs: DeliveryLog[]; // Per-attempt delivery records (email jobs)
+}
+
+interface DeliveryLog {
+  id: string;
+  attempt: number;
+  status: string;
+  // Success rows: provider that delivered. Failure rows: last attempted.
+  // `null` for pre-attempt failures or webhook jobs.
+  usedProvider: EmailProvider | null;
+  errorMessage: string | null;
+  createdAt: string;
 }
 ```
 
@@ -166,7 +194,16 @@ console.log(status.attempts); // 1
 if (status.status === "failed") {
   console.error("Delivery failed:", status.errorMessage);
 }
+
+// Inspect per-attempt provider history (email jobs)
+for (const log of status.deliveryLogs) {
+  console.log(`attempt ${log.attempt} via ${log.usedProvider ?? "unknown"}: ${log.status}`);
+}
 ```
+
+:::note `deliveryLogs` was added in SDK **1.1.0**
+Webhook jobs return an empty array. For email jobs, the last entry's `usedProvider` is the provider that delivered (success) or the last one attempted (failure).
+:::
 
 ---
 
@@ -364,15 +401,18 @@ import type {
   SendEmailOptions,
   SendWebhookOptions,
   JobResponse,
-  JobDetails,
+  JobStatus,
   JobSummary,
+  DeliveryLog,
+  EmailProvider,
+  RetryJobResponse,
   PaginationMeta,
   ApiInfo,
 } from "@notifykit/sdk";
 ```
 
-:::note Domain verification types
-Types like `DomainVerificationResponse`, `DomainStatusResponse`, `DomainInfoResponse`, and `DnsRecord` are exported from the package but **domain verification methods are not yet available in the SDK client**. Domain verification is currently managed through the NotifyKit dashboard (**Settings → Domain**).
+:::note Domain verification
+Domain verification is **dashboard-only** (**Settings → Domain**). The SDK does not export domain types or methods.
 :::
 
 ---

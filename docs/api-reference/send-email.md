@@ -36,6 +36,8 @@ POST /api/v1/notifications/email
 | `from`           | `string`       | Sender email address. Use your verified domain (e.g. `support@yourdomain.com`). NotifyKit automatically rewrites it to the correct sending subdomain. |
 | `priority`       | `1 \| 5 \| 10` | Job priority (1=high, 5=normal, 10=low). Default: `5`                                                                                                 |
 | `idempotencyKey` | `string`       | Unique key to prevent duplicate sends                                                                                                                 |
+| `provider`       | `"SENDGRID" \| "RESEND" \| "POSTMARK"` | Force this email through a specific configured provider. Paid plans only. See [Per-Message Provider Routing](#per-message-provider-routing-paid-plans).  |
+| `fallback`       | `"SENDGRID" \| "RESEND" \| "POSTMARK"` | Fallback provider tried only if `provider` fails. Requires `provider`. Paid plans only.                                                                |
 
 ### Custom Sender Rules (Paid Plans)
 
@@ -47,16 +49,16 @@ POST /api/v1/notifications/email
 ### Email Infrastructure by Plan
 
 :::info Free Plan
-Emails are sent via **NotifyKit's shared SendGrid account**. The sender address is always `noreply@notifykit.dev`. Custom `from` addresses are not supported.
+Emails are sent via **NotifyKit's shared infrastructure** (SendGrid, Resend, and Postmark with automatic failover). The sender address is always `noreply@notifykit.dev`. Custom `from` addresses are not supported.
 :::
 
 :::info Indie & Startup Plans
-Emails are sent via **your own SendGrid account**. You must connect your SendGrid API key in **Settings → Email Provider** before sending emails. Without it, email requests will be rejected.
+Emails are sent via **your own provider keys** (SendGrid, Resend, and/or Postmark). You must connect at least one provider API key in **Settings → API Keys** before sending emails. Without one, email requests will be rejected.
+
+Configure multiple providers to enable automatic failover — NotifyKit delivers through them in the priority order you set in the dashboard. You can also force a specific provider for a single message; see [Per-Message Provider Routing](#per-message-provider-routing-paid-plans).
 
 Custom `from` addresses (using your verified domain) are supported on paid plans.
-
-> **Coming soon:** Support for Resend, Mailgun, and AWS SES.
-> :::
+:::
 
 ### Examples
 
@@ -104,6 +106,43 @@ curl -X POST https://api.notifykit.dev/api/v1/notifications/email \
 :::info Domain Verification Required
 Custom `from` addresses require a verified sender domain. See [Domain Verification](/docs/guides/domain-verification).
 :::
+
+### Per-Message Provider Routing (Paid Plans)
+
+By default, emails are delivered through your configured providers in priority order with full failover. You can override that for a single message by passing `provider` (and optionally `fallback`) in the request body.
+
+```bash
+curl -X POST https://api.notifykit.dev/api/v1/notifications/email \
+  -H "X-API-Key: nh_your_key_here" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "to": "user@example.com",
+    "subject": "Receipt",
+    "body": "<p>Thanks for your order.</p>",
+    "provider": "POSTMARK",
+    "fallback": "SENDGRID"
+  }'
+```
+
+**Behavior:**
+
+| Field      | Effect                                                                                                                          |
+| ---------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| `provider` | The email is sent through this provider only. If it fails and `fallback` is unset, the job is marked failed — no other providers are tried. |
+| `fallback` | If `provider` fails, this provider is tried next. Other configured providers are skipped.                                      |
+
+Forced routing is sticky — it persists with the job, so retries (manual or automatic) replay the same restricted attempt set.
+
+**Validation errors:**
+
+| Condition                                            | Response          |
+| ---------------------------------------------------- | ----------------- |
+| `fallback` set without `provider`                    | `400 Bad Request` |
+| `provider` equals `fallback`                         | `400 Bad Request` |
+| Either field set on a Free plan                      | `403 Forbidden`   |
+| Requested `provider` or `fallback` not configured    | `400 Bad Request` |
+
+When neither field is set, behavior is unchanged — the worker tries your full priority list with full failover.
 
 ### Idempotent Requests
 
@@ -163,12 +202,12 @@ Invalid input (e.g., invalid email format, missing required field):
 
 Plan or domain requirements not met:
 
-**SendGrid key not configured:**
+**No email provider configured:**
 
 ```json
 {
   "success": false,
-  "error": "Please add your SendGrid API key in Settings before sending emails.",
+  "error": "Please add at least one email provider API key (SendGrid, Resend, or Postmark) in Settings before sending emails.",
   "timestamp": "2026-01-09T12:34:56.789Z"
 }
 ```

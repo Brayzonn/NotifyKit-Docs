@@ -13,7 +13,11 @@ Custom domain verification is available on **Indie** and **Startup** plans only.
 :::
 
 :::info Email Provider
-Domain verification registers your domain with each email provider you have configured. To verify a domain, you must have at least one provider API key (SendGrid or Resend) connected in **Settings → Email Providers**.
+Domain verification registers your domain with each email provider you have configured. To verify a domain, you must have at least one provider API key (SendGrid, Resend, or Postmark) connected in **Settings → API Keys**.
+:::
+
+:::info Postmark — Account Token Required
+Postmark uses two separate tokens. The **Server Token** is for sending mail; domain operations (create, verify, delete) require an additional **Account Token**. If you've connected Postmark and plan to verify a custom sending domain through it, also paste your Postmark Account Token in **Settings → API Keys → Postmark**. Find it in your Postmark dashboard under **Account → API Tokens**. Without it, NotifyKit will skip Postmark during domain registration.
 :::
 
 :::warning One Domain Per Account
@@ -24,7 +28,7 @@ You can only verify **one domain** per account at a time. To switch to a differe
 
 NotifyKit registers your domain with every email provider you have configured and generates DNS records for each. Once you add those records to your DNS provider, you trigger verification. When all providers confirm your domain, it becomes active for sending.
 
-If you have both SendGrid and Resend configured, you will receive DNS records from both providers. All records must be added — NotifyKit delivers through providers in priority order and falls back automatically if one fails.
+If you have multiple providers configured (any combination of SendGrid, Resend, and Postmark), you will receive DNS records from each. All records must be added — NotifyKit delivers through providers in priority order and falls back automatically if one fails.
 
 ## Step 1: Request Verification
 
@@ -56,14 +60,35 @@ Host: resend._domainkey.yourdomain.com
 Value: p.bymail.in
 ```
 
+**Postmark records (when an Account Token is configured):**
+
+```
+Type: TXT
+Host: yourdomain.com
+Value: "v=spf1 a mx include:spf.mtasv.net ~all"
+
+Type: TXT
+Host: 20260101pm._domainkey.yourdomain.com
+Value: "k=rsa; p=MIGfMA0GCSqGSIb3DQEBA..."
+
+Type: CNAME
+Host: pm-bounces.yourdomain.com
+Value: pm.mtasv.net
+```
+
+The exact host values for Postmark DKIM/Return-Path will vary — use whatever the dashboard shows.
+
 **What each record does:**
 
-| Record                              | Provider  | Purpose                                     |
-| ----------------------------------- | --------- | ------------------------------------------- |
+| Record                              | Provider  | Purpose                                      |
+| ----------------------------------- | --------- | -------------------------------------------- |
 | `em####.yourdomain.com`             | SendGrid  | Routes email through SendGrid infrastructure |
 | `s1._domainkey.yourdomain.com`      | SendGrid  | DKIM signature — proves emails are from you  |
 | `s2._domainkey.yourdomain.com`      | SendGrid  | Backup DKIM signature                        |
 | `resend._domainkey.yourdomain.com`  | Resend    | DKIM signature for Resend                    |
+| `yourdomain.com` (TXT)              | Postmark  | SPF — authorizes Postmark to send for you    |
+| `*pm._domainkey.yourdomain.com`     | Postmark  | DKIM signature for Postmark                  |
+| `pm-bounces.yourdomain.com`         | Postmark  | Custom Return-Path for Postmark              |
 
 ## Step 2: Add DNS Records
 
@@ -98,7 +123,7 @@ DNS propagation typically takes 15–60 minutes, but can take up to 24 hours.
 
 Once you've added all records and waited for propagation, go to **Settings → Domain** and click **Verify Domain**.
 
-Your domain is considered verified when **all configured providers** confirm it. If you have both SendGrid and Resend, both must pass.
+Your domain is considered verified when **all configured providers** confirm it. If you have multiple providers (SendGrid, Resend, and/or Postmark) connected, every one must pass.
 
 **Troubleshooting:**
 

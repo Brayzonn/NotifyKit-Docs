@@ -57,11 +57,31 @@ curl https://api.notifykit.dev/api/v1/notifications/jobs/job_abc123 \
     "errorMessage": null,
     "createdAt": "2026-01-09T12:34:56.789Z",
     "startedAt": "2026-01-09T12:34:57.123Z",
-    "completedAt": "2026-01-09T12:34:58.456Z"
+    "completedAt": "2026-01-09T12:34:58.456Z",
+    "deliveryLogs": [
+      {
+        "attempt": 1,
+        "status": "SUCCESS",
+        "usedProvider": "POSTMARK",
+        "errorMessage": null,
+        "createdAt": "2026-01-09T12:34:58.123Z"
+      }
+    ]
   },
   "timestamp": "2026-01-09T12:35:00.000Z"
 }
 ```
+
+#### `usedProvider` on delivery logs
+
+Each entry in `deliveryLogs[]` includes a `usedProvider` field for email jobs:
+
+| Value                                  | Meaning                                                              |
+| -------------------------------------- | -------------------------------------------------------------------- |
+| `"SENDGRID" \| "RESEND" \| "POSTMARK"` | Success rows: the provider that delivered. Failure rows: the last provider attempted. |
+| `null`                                 | Pre-attempt failure (no provider tried) or webhook job.             |
+
+This lets you audit which provider handled each attempt — useful for debugging multi-provider failover and per-message routing.
 
 ### Job Status Values
 
@@ -256,12 +276,12 @@ Job doesn't exist or is not in `failed` status:
 
 #### 400 Bad Request
 
-Retrying a failed email job without a SendGrid key configured (Indie/Startup plans):
+Retrying a failed email job without any email provider configured (Indie/Startup plans):
 
 ```json
 {
   "success": false,
-  "error": "Please add your SendGrid API key in settings before sending emails.",
+  "error": "Please add at least one email provider API key (SendGrid, Resend, or Postmark) in settings before sending emails.",
   "timestamp": "2026-01-09T12:35:00.000Z"
 }
 ```
