@@ -14,46 +14,47 @@ POST /api/v1/notifications/email
 
 ### Headers
 
-| Header         | Value              | Required |
-| -------------- | ------------------ | -------- |
-| `X-API-Key`    | Your API key       | Yes      |
-| `Content-Type` | `application/json` | Yes      |
+| Header                   | Value                  | Notes                                              |
+| ------------------------ | ---------------------- | -------------------------------------------------- |
+| `X-API-Key`              | Your API key           | Use this or `Authorization: Bearer`, not both      |
+| `Authorization: Bearer`  | Your API key           | Standard bearer token alternative to `X-API-Key`  |
+| `Content-Type`           | `application/json`     | Required on all requests                           |
 
 ### Request Body
 
 #### Required Fields
 
-| Parameter | Type     | Description                 |
-| --------- | -------- | --------------------------- |
-| `to`      | `string` | Recipient email address     |
-| `subject` | `string` | Email subject line          |
-| `body`    | `string` | Email body (HTML supported) |
+| Parameter | Type     | Description                                              |
+| --------- | -------- | -------------------------------------------------------- |
+| `to`      | `string` | Recipient email address — must be a valid email format   |
+| `subject` | `string` | Email subject line — shown in the recipient's inbox      |
+| `body`    | `string` | Email body — HTML is supported, plain text also works    |
 
 #### Optional Fields
 
 | Parameter        | Type           | Description                                                                                                                                           |
 | ---------------- | -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `from`           | `string`       | Sender email address. Use your verified domain (e.g. `support@yourdomain.com`). NotifyKit automatically rewrites it to the correct sending subdomain. |
-| `priority`       | `1 \| 5 \| 10` | Job priority (1=high, 5=normal, 10=low). Default: `5`                                                                                                 |
+| `from`           | `string`       | Sender email address. Pass your root domain (e.g. `support@yourdomain.com`) — NotifyKit rewrites it to `support@em.yourdomain.com` before delivery, which is the subdomain your provider requires for sending. If omitted, defaults to `noreply@em.yourdomain.com` (paid plans with a verified domain) or `noreply@notifykit.dev` (Free plan). |
+| `priority`       | `1 \| 5 \| 10` | Job priority (1=high, 5=normal, 10=low). Default: `5`. Paid plans only.                                                                               |
 | `idempotencyKey` | `string`       | Unique key to prevent duplicate sends                                                                                                                 |
 | `provider`       | `"SENDGRID" \| "RESEND" \| "POSTMARK"` | Force this email through a specific configured provider. Paid plans only. See [Per-Message Provider Routing](#per-message-provider-routing-paid-plans).  |
 | `fallback`       | `"SENDGRID" \| "RESEND" \| "POSTMARK"` | Fallback provider tried only if `provider` fails. Requires `provider`. Paid plans only.                                                                |
 
 ### Custom Sender Rules (Paid Plans)
 
-- Your domain must be verified.
-- Use your verified domain directly (e.g. `support@yourdomain.com`) — NotifyKit handles the rest.
+- Your domain must be verified in the **Domains** page of the dashboard before use. See [Domain Verification](/docs/guides/domain-verification).
+- Use your root domain (e.g. `support@yourdomain.com`) — NotifyKit rewrites it to the correct sending subdomain automatically.
 - If no `from` is provided, NotifyKit defaults to `noreply@em.yourdomain.com`.
 - A verified sending domain is required for all paid plan email sends — requests without one will be rejected.
 
 ### Email Infrastructure by Plan
 
 :::info Free Plan
-Emails are sent via **NotifyKit's shared infrastructure** (SendGrid, Resend, and Postmark with automatic failover). The sender address is always `noreply@notifykit.dev`. Custom `from` addresses are not supported.
+Emails are sent via **NotifyKit's shared infrastructure** with automatic failover across supported providers. The sender address is always `noreply@notifykit.dev`. Custom `from` addresses are not supported.
 :::
 
 :::info Indie & Startup Plans
-Emails are sent via **your own provider keys** (SendGrid, Resend, and/or Postmark). You must connect at least one provider API key in **Settings → API Keys** before sending emails. Without one, email requests will be rejected.
+Emails are sent via **your own provider keys**. You must connect at least one provider API key in **API Keys** before sending emails. Without one, email requests will be rejected.
 
 Configure multiple providers to enable automatic failover — NotifyKit delivers through them in the priority order you set in the dashboard. You can also force a specific provider for a single message; see [Per-Message Provider Routing](#per-message-provider-routing-paid-plans).
 
@@ -62,7 +63,9 @@ Custom `from` addresses (using your verified domain) are supported on paid plans
 
 ### Examples
 
-#### Simple Email
+#### Free Plan
+
+**Simple email:**
 
 ```bash
 curl -X POST https://api.notifykit.dev/api/v1/notifications/email \
@@ -75,7 +78,23 @@ curl -X POST https://api.notifykit.dev/api/v1/notifications/email \
   }'
 ```
 
-#### High Priority Email
+**With idempotency key** (safe to retry on network failure):
+
+```bash
+curl -X POST https://api.notifykit.dev/api/v1/notifications/email \
+  -H "X-API-Key: nh_your_key_here" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "to": "user@example.com",
+    "subject": "Payment Confirmation",
+    "body": "<p>Payment received.</p>",
+    "idempotencyKey": "payment-12345"
+  }'
+```
+
+#### Paid Plans
+
+**High priority** (e.g. password resets, alerts):
 
 ```bash
 curl -X POST https://api.notifykit.dev/api/v1/notifications/email \
@@ -89,7 +108,21 @@ curl -X POST https://api.notifykit.dev/api/v1/notifications/email \
   }'
 ```
 
-#### Custom From Address (Paid Plans Only)
+**Low priority** (e.g. newsletters, digests):
+
+```bash
+curl -X POST https://api.notifykit.dev/api/v1/notifications/email \
+  -H "X-API-Key: nh_your_key_here" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "to": "user@example.com",
+    "subject": "Your Monthly Newsletter",
+    "body": "<h1>What'\''s new this month</h1>",
+    "priority": 10
+  }'
+```
+
+**Custom from address:**
 
 ```bash
 curl -X POST https://api.notifykit.dev/api/v1/notifications/email \
@@ -98,14 +131,30 @@ curl -X POST https://api.notifykit.dev/api/v1/notifications/email \
   -d '{
     "to": "user@example.com",
     "from": "support@yourdomain.com",
-    "subject": "Newsletter",
-    "body": "<h1>Monthly Update</h1>"
+    "subject": "We got your ticket",
+    "body": "<p>We'\''ll get back to you within 24 hours.</p>"
   }'
 ```
 
 :::info Domain Verification Required
 Custom `from` addresses require a verified sender domain. See [Domain Verification](/docs/guides/domain-verification).
 :::
+
+**Full request:**
+
+```bash
+curl -X POST https://api.notifykit.dev/api/v1/notifications/email \
+  -H "X-API-Key: nh_your_key_here" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "to": "user@example.com",
+    "from": "billing@yourdomain.com",
+    "subject": "Invoice #1042",
+    "body": "<p>Your invoice is attached.</p>",
+    "priority": 1,
+    "idempotencyKey": "invoice-1042-email"
+  }'
+```
 
 ### Per-Message Provider Routing (Paid Plans)
 
@@ -131,16 +180,21 @@ curl -X POST https://api.notifykit.dev/api/v1/notifications/email \
 | `provider` | The email is sent through this provider only. If it fails and `fallback` is unset, the job is marked failed — no other providers are tried. |
 | `fallback` | If `provider` fails, this provider is tried next. Other configured providers are skipped.                                      |
 
-Forced routing is sticky — it persists with the job, so retries (manual or automatic) replay the same restricted attempt set.
+**Retries and attempt counting:**
+
+Trying your `fallback` after `provider` fails counts as one attempt — failover happens within a single attempt, not across separate retries. If both fail, the job is permanently failed with no automatic retries. If the job is manually retried, the same `provider` and `fallback` values are used — your other configured providers are never tried.
+
+Without forced routing, each attempt tries your full provider list before counting as failed. The job is retried up to 3 times total before moving to failed status. See [Retry Logic](/docs/guides/retry-logic).
 
 **Validation errors:**
 
-| Condition                                            | Response          |
-| ---------------------------------------------------- | ----------------- |
-| `fallback` set without `provider`                    | `400 Bad Request` |
-| `provider` equals `fallback`                         | `400 Bad Request` |
-| Either field set on a Free plan                      | `403 Forbidden`   |
-| Requested `provider` or `fallback` not configured    | `400 Bad Request` |
+| Condition                                    | Response          | Error message                                              |
+| -------------------------------------------- | ----------------- | ---------------------------------------------------------- |
+| `fallback` set without `provider`            | `400 Bad Request` | `` `fallback` requires `provider` to be set ``             |
+| `provider` and `fallback` are the same value | `400 Bad Request` | `` `provider` and `fallback` must be different ``          |
+| `provider` not configured for this account   | `400 Bad Request` | `Provider {X} is not configured for this customer`         |
+| `fallback` not configured for this account   | `400 Bad Request` | `Fallback provider {X} is not configured for this customer`|
+| `provider` or `fallback` used on Free plan   | `403 Forbidden`   | `Per-message provider routing requires a paid plan`        |
 
 When neither field is set, behavior is unchanged — the worker tries your full priority list with full failover.
 

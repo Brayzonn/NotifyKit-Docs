@@ -8,17 +8,26 @@ All API requests require an API key. Keys are prefixed with `nh_`
 
 ### API Key Headers
 
-**`X-API-Key` header:**
+Two HTTP headers are accepted — use whichever fits your HTTP client:
+
+**`X-API-Key`:**
 
 ```bash
 curl https://api.notifykit.dev/api/v1/ping \
   -H "X-API-Key: nh_your_key_here"
 ```
 
+**`Authorization: Bearer`:**
+
+```bash
+curl https://api.notifykit.dev/api/v1/ping \
+  -H "Authorization: Bearer nh_your_key_here"
+```
+
 ### Getting Your API Key
 
 1. Log in to your NotifyKit dashboard
-2. Navigate to **Settings → API Keys**
+2. Navigate to **API Keys**
 3. Click **Generate API Key**
 4. Copy your key — it is shown only once
 
@@ -45,10 +54,13 @@ Store your key in an environment variable:
 NOTIFYKIT_API_KEY=nh_your_key_here
 ```
 
-```typescript
-const client = new NotifyKitClient({
-  apiKey: process.env.NOTIFYKIT_API_KEY!,
-});
+Then reference it in your requests:
+
+```bash
+curl https://api.notifykit.dev/api/v1/notifications/email \
+  -H "X-API-Key: $NOTIFYKIT_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"to":"user@example.com","subject":"Hello","body":"Hi there."}'
 ```
 
 ### Error Responses

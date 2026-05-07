@@ -18,9 +18,10 @@ GET /api/v1/notifications/jobs/{jobId}
 
 ### Headers
 
-| Header      | Value        | Required |
-| ----------- | ------------ | -------- |
-| `X-API-Key` | Your API key | Yes      |
+| Header          | Value                   | Required                  |
+| --------------- | ----------------------- | ------------------------- |
+| `X-API-Key`     | Your API key            | Yes (or `Authorization`)  |
+| `Authorization` | `Bearer <api_key>`      | Yes (or `X-API-Key`)      |
 
 ### Path Parameters
 
@@ -60,8 +61,9 @@ curl https://api.notifykit.dev/api/v1/notifications/jobs/job_abc123 \
     "completedAt": "2026-01-09T12:34:58.456Z",
     "deliveryLogs": [
       {
+        "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
         "attempt": 1,
-        "status": "SUCCESS",
+        "status": "success",
         "usedProvider": "POSTMARK",
         "errorMessage": null,
         "createdAt": "2026-01-09T12:34:58.123Z"
@@ -78,8 +80,8 @@ Each entry in `deliveryLogs[]` includes a `usedProvider` field for email jobs:
 
 | Value                                  | Meaning                                                              |
 | -------------------------------------- | -------------------------------------------------------------------- |
-| `"SENDGRID" \| "RESEND" \| "POSTMARK"` | Success rows: the provider that delivered. Failure rows: the last provider attempted. |
-| `null`                                 | Pre-attempt failure (no provider tried) or webhook job.             |
+| `"SENDGRID" \| "RESEND" \| "POSTMARK"` | Success rows: the provider that delivered. Failure rows: the last provider attempted. Paid plans only. |
+| `null`                                 | Pre-attempt failure, any webhook job entry, or any Free plan job.   |
 
 This lets you audit which provider handled each attempt — useful for debugging multi-provider failover and per-message routing.
 
@@ -118,9 +120,10 @@ GET /api/v1/notifications/jobs
 
 ### Headers
 
-| Header      | Value        | Required |
-| ----------- | ------------ | -------- |
-| `X-API-Key` | Your API key | Yes      |
+| Header          | Value                   | Required                  |
+| --------------- | ----------------------- | ------------------------- |
+| `X-API-Key`     | Your API key            | Yes (or `Authorization`)  |
+| `Authorization` | `Bearer <api_key>`      | Yes (or `X-API-Key`)      |
 
 ### Query Parameters
 
@@ -227,9 +230,10 @@ POST /api/v1/notifications/jobs/{jobId}/retry
 
 ### Headers
 
-| Header      | Value        | Required |
-| ----------- | ------------ | -------- |
-| `X-API-Key` | Your API key | Yes      |
+| Header          | Value                   | Required                  |
+| --------------- | ----------------------- | ------------------------- |
+| `X-API-Key`     | Your API key            | Yes (or `Authorization`)  |
+| `Authorization` | `Bearer <api_key>`      | Yes (or `X-API-Key`)      |
 
 ### Path Parameters
 

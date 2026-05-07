@@ -23,16 +23,25 @@ const job = await client.sendEmail({
   to: "user@example.com",
   subject: "Welcome to NotifyKit!",
   body: "<h1>Hello!</h1><p>Welcome to our service.</p>",
-  idempotencyKey: "welcome-user-123", // Prevents duplicate sends
+  idempotencyKey: "welcome-user-123",
 });
 
 console.log("Email queued:", job.jobId);
 ```
 
-:::info Free vs. paid plan emails
-On the **Free plan**, emails send from `noreply@notifykit.dev` via NotifyKit's shared infrastructure (SendGrid, Resend, and Postmark with automatic failover).
-On **Indie/Startup** plans, connect at least one provider API key (SendGrid, Resend, or Postmark) in **Settings → API Keys** first. Multiple providers can be configured for failover.
-:::
+:::info Free vs. paid plan emails  
+ On the Free plan, emails send from noreply@notifykit.dev via NotifyKit's shared infrastructure with automatic failover
+across supported providers.
+
+On Indie/Startup plans, connect at least one provider API key in Settings → API Keys first.
+
+- Default routing (no provider field): providers are tried in your configured priority order. If one fails, the next is
+  tried automatically. Transient failures are retried up to 3 times across the queue before the job is permanently
+  failed.
+- Forced routing (provider field set): only the specified provider is used. If you also set fallback, that is tried if
+  the primary fails. No other configured providers are attempted, and failures are permanent — the job will not be  
+  retried.
+  :::
 
 ### Send a Webhook
 

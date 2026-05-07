@@ -38,7 +38,7 @@ export default function Home() {
   return (
     <Layout
       title="NotifyKit Documentation"
-      description="Documentation for NotifyKit — one API for all your email providers"
+      description="Documentation for NotifyKit — queue-backed email and webhook delivery with automatic retries, provider failover, and per-attempt delivery logs."
     >
       <main className="nk-landing">
         <section className="nk-hero">
@@ -54,22 +54,24 @@ export default function Home() {
             </a>
 
             <h1 className="nk-hero__title">
-              Everything
+              You Send the Request.
               <br />
-              You Need To Build
+              We Make Sure
               <br />
-              With NotifyKit
+              It Lands.
             </h1>
 
             <p className="nk-hero__subtitle">
-              The official documentation for the NotifyKit API and SDK. Send
-              email and webhook notifications through SendGrid, Resend, or
-              Postmark with one interface — automatic retries, failover, and
-              unified delivery logs.
+              NotifyKit is multi-email client notification infrastructure for
+              your app. One API call queues your email or webhook, delivers it
+              in the background, retries on failure, and logs every attempt.
             </p>
 
             <div className="nk-hero__cta">
-              <Link to="/docs/getting-started/quickstart" className="nk-btn nk-btn--primary">
+              <Link
+                to="/docs/getting-started/quickstart"
+                className="nk-btn nk-btn--primary"
+              >
                 Get Started →
               </Link>
               <Link
@@ -86,13 +88,59 @@ export default function Home() {
           <div className="nk-features__grid">
             <div className="nk-feature">
               <div className="nk-feature__icon">
+                <svg
+                  width="22"
+                  height="22"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <circle cx="12" cy="12" r="10" />
+                  <polyline points="12 6 12 12 16 14" />
+                </svg>
+              </div>
+              <h3>Async job queue</h3>
+              <p>
+                Your API call returns in under 100ms. NotifyKit queues the job
+                and handles delivery in the background, so your server never
+                blocks on a slow provider or webhook endpoint.
+              </p>
+            </div>
+            <div className="nk-feature">
+              <div className="nk-feature__icon">
                 <NotifyKitIcon size={22} />
               </div>
-              <h3>One API, three providers</h3>
+              <h3>Automatic provider failover</h3>
               <p>
-                SendGrid, Resend, and Postmark behind a single interface. Bring
-                your own keys, set a priority order, and let NotifyKit fail over
-                automatically.
+                Connect multiple email provider keys, set a priority order, and
+                NotifyKit delivers through them in sequence. If one provider
+                fails or goes down, the next takes over automatically. A
+                provider outage no longer means emails stop.
+              </p>
+            </div>
+            <div className="nk-feature">
+              <div className="nk-feature__icon">
+                <svg
+                  width="22"
+                  height="22"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                </svg>
+              </div>
+              <h3>Priority lanes</h3>
+              <p>
+                Mark jobs CRITICAL, NORMAL, or LOW. Password resets and payment
+                confirmations skip the line and never queue behind batch
+                digests or newsletters.
               </p>
             </div>
             <div className="nk-feature">
@@ -111,10 +159,34 @@ export default function Home() {
                   <polyline points="21 4 21 10 15 10" />
                 </svg>
               </div>
-              <h3>Retries & idempotency built in</h3>
+              <h3>Retries & dead-letter queue</h3>
               <p>
-                Exponential backoff, automatic dead-letter handling, idempotency
-                keys to prevent double-sends. Your code stays simple.
+                Three attempts with exponential backoff. For webhooks, 4xx
+                errors stop immediately with no wasted retries on a bad payload.
+                Exhausted jobs move to a dead-letter queue, never deleted.
+                Re-queue with one API call.
+              </p>
+            </div>
+            <div className="nk-feature">
+              <div className="nk-feature__icon">
+                <svg
+                  width="22"
+                  height="22"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                </svg>
+              </div>
+              <h3>Idempotency</h3>
+              <p>
+                Attach an idempotency key to any send request. If a network
+                timeout leaves you unsure whether the job was created, retry
+                freely. Same key always means one delivery, never two.
               </p>
             </div>
             <div className="nk-feature">
@@ -134,10 +206,11 @@ export default function Home() {
                   <line x1="9" y1="21" x2="9" y2="9" />
                 </svg>
               </div>
-              <h3>Unified delivery logs</h3>
+              <h3>Per-attempt delivery logs</h3>
               <p>
-                Every attempt across every provider, with the exact provider
-                that delivered it. Audit, debug, and prove what shipped.
+                Every attempt is logged: HTTP status, response body, error
+                message, timestamp, and the exact provider used. Full
+                visibility across every job from PENDING to COMPLETED.
               </p>
             </div>
           </div>
@@ -146,7 +219,10 @@ export default function Home() {
         <section className="nk-quicklinks">
           <h2 className="nk-quicklinks__title">Jump in</h2>
           <div className="nk-quicklinks__grid">
-            <Link to="/docs/getting-started/quickstart" className="nk-link-card">
+            <Link
+              to="/docs/getting-started/quickstart"
+              className="nk-link-card"
+            >
               <span className="nk-link-card__label">Quickstart</span>
               <span className="nk-link-card__hint">
                 Send your first notification in under 5 minutes.
@@ -159,7 +235,10 @@ export default function Home() {
                 provider routing.
               </span>
             </Link>
-            <Link to="/docs/guides/domain-verification" className="nk-link-card">
+            <Link
+              to="/docs/guides/domain-verification"
+              className="nk-link-card"
+            >
               <span className="nk-link-card__label">Domain Verification</span>
               <span className="nk-link-card__hint">
                 Verify a custom sender domain across all configured providers.

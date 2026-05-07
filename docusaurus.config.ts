@@ -109,12 +109,19 @@ const config: Config = {
   themeConfig: {
     image: "img/notifykit-social-card.jpg",
     colorMode: {
-      defaultMode: "light",
+      defaultMode: "dark",
       disableSwitch: false,
       respectPrefersColorScheme: true,
     },
     navbar: {
       title: "NotifyKit",
+      logo: {
+        alt: "NotifyKit",
+        src: "img/notifykit-logo.svg",
+        srcDark: "img/notifykit-logo-dark.svg",
+        width: 22,
+        height: 28,
+      },
       items: [
         {
           label: "REST API",

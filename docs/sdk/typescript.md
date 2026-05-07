@@ -23,7 +23,7 @@ import { NotifyKitClient } from "@notifykit/sdk";
 
 const client = new NotifyKitClient({
   apiKey: process.env.NOTIFYKIT_API_KEY!,
-  baseUrl: "https://api.notifykit.dev", // Optional — defaults to production
+  baseUrl: "https://api.notifykit.dev", // Optional — defaults to https://api.notifykit.dev
 });
 ```
 
@@ -48,12 +48,12 @@ Queue an email for delivery. Returns immediately with a job ID — the email is 
 type EmailProvider = "SENDGRID" | "RESEND" | "POSTMARK";
 
 interface SendEmailOptions {
-  to: string; // Recipient email address
-  subject: string; // Email subject line
+  to: string;
+  subject: string;
   body: string; // Email body (HTML supported)
   from?: string; // Sender address. Use your verified domain (e.g. support@yourdomain.com). Paid plans only.
   priority?: 1 | 5 | 10; // Job priority: 1=high, 5=normal (default), 10=low
-  idempotencyKey?: string; // Unique key to prevent duplicate sends
+  idempotencyKey?: string;
   provider?: EmailProvider; // Force this email through a specific provider. Paid plans only.
   fallback?: EmailProvider; // Second provider tried only if `provider` fails. Requires `provider`.
 }
@@ -78,17 +78,23 @@ const job = await client.sendEmail({
   subject: "Welcome!",
   body: "<h1>Hello World</h1>",
   priority: 1, // High priority
-  idempotencyKey: "welcome-user-123", // Prevents duplicate sends
+  idempotencyKey: "welcome-user-123",
 });
 
 console.log(job.jobId); // "job_abc123"
 ```
 
-:::info Email providers by plan
+:::info Free Plan
+Emails are sent via **NotifyKit's shared infrastructure** with automatic failover across supported providers. The sender address is always `noreply@notifykit.dev`. Custom `from` addresses are not supported.
+:::
 
-- **Free:** Sent via NotifyKit's shared infrastructure (SendGrid, Resend, and Postmark with automatic failover). `from` is always `noreply@notifykit.dev`.
-- **Indie / Startup:** Sent via your own provider keys. Connect SendGrid, Resend, and/or Postmark in **Settings → API Keys**. Custom `from` addresses (using your verified domain) are supported.
-  :::
+:::info Indie & Startup Plans
+Emails are sent via **your own provider keys**. You must connect at least one provider API key in **API Keys** before sending emails. Without one, email requests will be rejected.
+
+Configure multiple providers to enable automatic failover — NotifyKit delivers through them in the priority order you set in the dashboard. You can also force a specific provider for a single message using `provider` and `fallback`.
+
+Custom `from` addresses (using your verified domain) are supported on paid plans.
+:::
 
 :::note Per-message provider routing
 Paid plans can force a single email through a specific provider by passing `provider` (and optionally `fallback`) on `sendEmail()`. Available since SDK **1.1.0**. See [Per-Message Provider Routing](/docs/api-reference/send-email#per-message-provider-routing-paid-plans).
@@ -102,6 +108,7 @@ await client.sendEmail({
   fallback: "RESEND", // optional; requires provider
 });
 ```
+
 :::
 
 ---
@@ -115,11 +122,11 @@ Queue a webhook delivery. Returns immediately with a job ID.
 ```typescript
 interface SendWebhookOptions {
   url: string; // Webhook destination URL (must be HTTPS)
-  payload: object; // JSON payload to deliver (required)
+  payload: any; // JSON payload to deliver (required, max 10kb)
   method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE"; // HTTP method (default: "POST")
-  headers?: Record<string, string>; // Custom headers to include
-  priority?: 1 | 5 | 10; // Job priority: 1=high, 5=normal (default), 10=low
-  idempotencyKey?: string; // Unique key to prevent duplicate sends
+  headers?: Record<string, string>;
+  priority?: 1 | 5 | 10;
+  idempotencyKey?: string;
 }
 ```
 
@@ -133,9 +140,6 @@ const job = await client.sendWebhook({
   payload: {
     event: "payment.completed",
     amount: 49.99,
-  },
-  headers: {
-    "X-Webhook-Secret": process.env.WEBHOOK_SECRET!,
   },
   idempotencyKey: "payment-456-webhook",
 });
@@ -168,15 +172,13 @@ interface JobStatus {
   createdAt: string;
   startedAt?: string;
   completedAt?: string;
-  deliveryLogs: DeliveryLog[]; // Per-attempt delivery records (email jobs)
+  deliveryLogs: DeliveryLog[]; // Per-attempt delivery records
 }
 
 interface DeliveryLog {
   id: string;
   attempt: number;
   status: string;
-  // Success rows: provider that delivered. Failure rows: last attempted.
-  // `null` for pre-attempt failures or webhook jobs.
   usedProvider: EmailProvider | null;
   errorMessage: string | null;
   createdAt: string;
@@ -195,14 +197,15 @@ if (status.status === "failed") {
   console.error("Delivery failed:", status.errorMessage);
 }
 
-// Inspect per-attempt provider history (email jobs)
 for (const log of status.deliveryLogs) {
-  console.log(`attempt ${log.attempt} via ${log.usedProvider ?? "unknown"}: ${log.status}`);
+  console.log(
+    `attempt ${log.attempt} via ${log.usedProvider ?? "unknown"}: ${log.status}`,
+  );
 }
 ```
 
 :::note `deliveryLogs` was added in SDK **1.1.0**
-Webhook jobs return an empty array. For email jobs, the last entry's `usedProvider` is the provider that delivered (success) or the last one attempted (failure).
+Both email and webhook jobs populate `deliveryLogs`. For paid plan email jobs, each entry includes `usedProvider` — the provider that delivered (success) or the last one attempted (failure). Free plan and webhook job entries always have `usedProvider: null`.
 :::
 
 ---
@@ -358,7 +361,8 @@ try {
     } else if (error.isStatus(401)) {
       console.error("Invalid API key");
     } else if (error.isStatus(403)) {
-      // Could be: domain not verified, quota exceeded, account inactive
+      // Could be: quota exceeded, account inactive
+      // On retryJob: also domain not verified or no provider configured
       console.error("Forbidden:", error.message);
     } else if (error.isStatus(409)) {
       console.error("Duplicate idempotency key");
@@ -375,12 +379,13 @@ try {
 
 ### NotifyKitError Properties
 
-| Property     | Type       | Description                                |
-| ------------ | ---------- | ------------------------------------------ |
-| `message`    | `string`   | Error message from the API                 |
-| `statusCode` | `number`   | HTTP status code                           |
-| `response`   | `any`      | Full raw API response                      |
-| `errors`     | `string[]` | Validation error details (400 errors only) |
+| Property     | Type                  | Description                                                                |
+| ------------ | --------------------- | -------------------------------------------------------------------------- |
+| `message`    | `string`              | Error message from the API                                                 |
+| `statusCode` | `number \| undefined` | HTTP status code. `undefined` on network errors with no HTTP response      |
+| `response`   | `any`                 | Full raw API response                                                      |
+| `errors`     | `any[] \| undefined`  | Validation error details, typically populated on 400 errors                |
+| `retryAfter` | `number \| undefined` | Seconds to wait before retrying. Only set on 429s that include the field   |
 
 ### NotifyKitError Methods
 
@@ -412,7 +417,7 @@ import type {
 ```
 
 :::note Domain verification
-Domain verification is **dashboard-only** (**Settings → Domain**). The SDK does not export domain types or methods.
+Domain verification is **dashboard-only** (**Domains**). The SDK does not export domain types or methods.
 :::
 
 ---
@@ -447,7 +452,6 @@ async function notifyUserAndSystem(
     const webhookJob = await client.sendWebhook({
       url: "https://internal.your-app.com/order-events",
       payload: { event: "order.confirmed", orderId, userId },
-      headers: { "X-Internal-Secret": process.env.INTERNAL_WEBHOOK_SECRET! },
       idempotencyKey: `order-${orderId}-webhook`,
     });
 

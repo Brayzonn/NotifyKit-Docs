@@ -6,85 +6,121 @@ sidebar_position: 3
 
 When NotifyKit delivers a webhook to your endpoint, that endpoint is publicly accessible on the internet. This page covers how to authenticate incoming webhook requests and protect your endpoint from unauthorized calls.
 
-## Authenticate with a Shared Secret
+## HMAC Signature Verification (Recommended)
 
-The most reliable way to secure your webhook endpoint is to include a shared secret in the request headers when you send the webhook. Your endpoint then verifies that the header is present and matches the expected value.
+NotifyKit can sign every outgoing webhook delivery with an HMAC-SHA256 signature. Your endpoint uses the signature to verify the delivery is genuinely from NotifyKit and that the payload has not been tampered with in transit.
 
-**Step 1 — Include a secret header when sending:**
+### Set Up a Signing Secret
 
-```typescript
-const secret = process.env.WEBHOOK_SECRET; // A strong random string
+1. Go to **API Keys** in the dashboard.
+2. Scroll to the **Webhook Security** section.
+3. Click **Generate** to create a signing secret.
 
-await client.sendWebhook({
-  url: "https://your-app.com/webhooks/orders",
-  payload: {
-    event: "order.placed",
-    orderId: "order_123",
-  },
-  headers: {
-    "X-Webhook-Secret": secret,
-  },
-  idempotencyKey: "order-123-placed",
-});
+The secret is shown **once** — copy it and store it securely (e.g., as an environment variable). NotifyKit stores only an encrypted version; the plaintext is never shown again. You can rotate or delete the secret at any time.
+
+### Signature Headers
+
+When a signing secret is configured, NotifyKit includes two headers on every webhook delivery:
+
+| Header                  | Example                        | Description                                      |
+| ----------------------- | ------------------------------ | ------------------------------------------------ |
+| `X-Webhook-Timestamp`   | `1746561234`                   | Unix timestamp (seconds) of when the delivery was made |
+| `X-Webhook-Signature`   | `t=1746561234,v1=a3f...`       | HMAC-SHA256 signature with the timestamp prefix  |
+
+### Signature Algorithm
+
+The signature is computed as:
+
+```
+HMAC-SHA256(secret, "<timestamp>.<JSON body>")
 ```
 
-```bash
-curl -X POST https://api.notifykit.dev/api/v1/notifications/webhook \
-  -H "X-API-Key: nh_your_key_here" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "url": "https://your-app.com/webhooks/orders",
-    "payload": { "event": "order.placed", "orderId": "order_123" },
-    "headers": {
-      "X-Webhook-Secret": "your_shared_secret_here"
-    }
-  }'
-```
+Where:
+- `secret` — your plaintext signing secret
+- `timestamp` — the value from `X-Webhook-Timestamp`
+- `JSON body` — the raw request body (`JSON.stringify(payload)`)
 
-**Step 2 — Validate the secret at your endpoint:**
+The `X-Webhook-Signature` header has the format `t=<timestamp>,v1=<hex signature>`.
+
+### Verify at Your Endpoint
 
 ```typescript
-// Express.js example
+import express from "express";
+import * as crypto from "crypto";
+
+const app = express();
+
+// Raw body parser — required so the body string is available for signature verification
+app.use("/webhooks", express.raw({ type: "application/json" }));
+
 app.post("/webhooks/orders", (req, res) => {
-  const incomingSecret = req.headers["x-webhook-secret"];
-  const expectedSecret = process.env.WEBHOOK_SECRET;
+  const rawBody = req.body.toString("utf8");
+  const signatureHeader = req.headers["x-webhook-signature"] as string;
+  const timestampHeader = req.headers["x-webhook-timestamp"] as string;
+  const secret = process.env.NOTIFYKIT_WEBHOOK_SECRET!;
 
-  if (!incomingSecret || incomingSecret !== expectedSecret) {
-    return res.status(401).json({ error: "Unauthorized" });
+  if (!signatureHeader || !timestampHeader) {
+    return res.status(401).json({ error: "Missing signature headers" });
   }
 
-  // Process the payload
-  const { event, orderId } = req.body;
-  console.log(`Received ${event} for order ${orderId}`);
+  // Reject stale deliveries outside the 5-minute window
+  const ts = parseInt(timestampHeader, 10);
+  if (Math.abs(Date.now() / 1000 - ts) > 300) {
+    return res.status(401).json({ error: "Stale delivery" });
+  }
 
+  // Reconstruct the signed string and compute the expected signature
+  const signed = `${timestampHeader}.${rawBody}`;
+  const expected = crypto.createHmac("sha256", secret).update(signed).digest("hex");
+
+  // Parse v1 from "t=<ts>,v1=<hex>"
+  const match = signatureHeader.match(/v1=([a-f0-9]+)/);
+  if (!match) return res.status(401).json({ error: "Invalid signature" });
+  const received = match[1];
+
+  // Constant-time comparison to prevent timing attacks
+  const valid = crypto.timingSafeEqual(
+    Buffer.from(expected, "hex"),
+    Buffer.from(received, "hex"),
+  );
+
+  if (!valid) {
+    return res.status(401).json({ error: "Invalid signature" });
+  }
+
+  const payload = JSON.parse(rawBody);
+  console.log("Verified delivery:", payload);
   res.status(200).json({ received: true });
 });
 ```
 
-:::warning Return 200 for unauthorized requests (optional)
-Returning `401` for invalid secrets will stop NotifyKit from retrying (4xx responses are not retried). If you'd prefer to silently discard invalid requests while still acknowledging receipt, return `200` and log the failure.
+:::warning Parse the raw body, not the parsed object
+Most frameworks (Express, Fastify) parse the JSON body before your handler runs. Signing uses the **raw byte string** — re-serializing a parsed object can change key order or whitespace and break verification. Always read `req.rawBody` or use a raw body middleware on the webhook route.
+:::
+
+:::tip Replay protection
+The 5-minute timestamp tolerance in the example above rejects replayed deliveries. An attacker who captures a valid delivery cannot replay it after the window has expired.
 :::
 
 ## Use HTTPS Endpoints
 
-Always use HTTPS for your webhook URL. HTTP sends your payload in plaintext, exposing the payload contents and any secret headers to anyone who can observe the network traffic.
+Always use HTTPS for your webhook URL. HTTP sends your payload in plaintext, exposing payload contents and any secret headers to observers on the network.
 
-NotifyKit only accepts HTTPS webhook URLs. HTTP URLs are rejected at the API level with a `400` error.
+NotifyKit only accepts HTTPS webhook URLs. HTTP URLs are rejected with a `400` error.
 
 ## Keep Secrets Out of Payloads
 
-Don't put sensitive data (API keys, tokens, PII) directly in the webhook payload. Payloads are logged in the NotifyKit dashboard for debugging. Use the payload to send identifiers, then fetch sensitive data from your own API.
+Don't put sensitive data (API keys, tokens, PII) directly in the webhook payload. The payload is stored on the job record while the job is pending or failed, and is accessible to anyone with your API key via the Jobs API. Use the payload to send identifiers, then fetch sensitive data from your own API.
 
 **Avoid:**
 
 ```typescript
-// Don't put secrets in the payload
 await client.sendWebhook({
   url: "https://your-app.com/webhook",
   payload: {
     userId: "123",
     creditCard: "4111111111111111", // Bad
-    apiToken: "sk_live_abc123", // Bad
+    apiToken: "sk_live_abc123",     // Bad
   },
 });
 ```
@@ -92,7 +128,6 @@ await client.sendWebhook({
 **Prefer:**
 
 ```typescript
-// Send only identifiers — fetch details server-side
 await client.sendWebhook({
   url: "https://your-app.com/webhook",
   payload: {
@@ -104,50 +139,21 @@ await client.sendWebhook({
 
 ## Handle Duplicate Deliveries
 
-NotifyKit delivers webhooks at least once. Network issues or retries can result in the same webhook being delivered more than once. Your endpoint should be idempotent.
+NotifyKit delivers webhooks at least once. Network issues or retries can result in the same webhook being delivered more than once. Your endpoint should be idempotent — processing the same event twice should produce the same result.
 
-**Simple deduplication with a seen-events set:**
-
-```typescript
-const processedEvents = new Set<string>();
-
-app.post("/webhooks/orders", (req, res) => {
-  const secret = req.headers["x-webhook-secret"];
-  if (secret !== process.env.WEBHOOK_SECRET) {
-    return res.status(200).end(); // Silently discard
-  }
-
-  const { event, orderId } = req.body;
-  const eventId = `${event}:${orderId}`;
-
-  if (processedEvents.has(eventId)) {
-    // Already handled — acknowledge without re-processing
-    return res.status(200).json({ duplicate: true });
-  }
-
-  processedEvents.add(eventId);
-
-  // Process the event
-  handleOrderEvent(event, orderId);
-
-  res.status(200).json({ received: true });
-});
-```
-
-For production, persist processed IDs in a database rather than an in-memory set.
+For production, persist a set of processed event identifiers in a database and check before processing each delivery.
 
 ## Respond Quickly
 
-NotifyKit times out webhook requests that take too long to respond. If your endpoint does heavy processing synchronously, it may time out and trigger a retry.
+NotifyKit times out webhook requests after **30 seconds**. Heavy synchronous processing can trigger a retry.
 
-**Best practice — acknowledge first, process in background:**
+**Best practice — acknowledge immediately, process in background:**
 
 ```typescript
 app.post("/webhooks/orders", async (req, res) => {
-  // Validate secret
-  if (req.headers["x-webhook-secret"] !== process.env.WEBHOOK_SECRET) {
-    return res.status(200).end();
-  }
+  // Validate signature first
+  const valid = verifyWebhookSignature(/* ... */);
+  if (!valid) return res.status(401).end();
 
   // Respond immediately
   res.status(200).json({ received: true });
@@ -161,14 +167,15 @@ app.post("/webhooks/orders", async (req, res) => {
 
 ## Best Practices Summary
 
-| Practice                          | Why                                          |
-| --------------------------------- | -------------------------------------------- |
-| Use a shared secret header        | Prevents unauthorized calls to your endpoint |
-| Use HTTPS                         | Encrypts payload and headers in transit      |
-| Make endpoints idempotent         | Handles duplicate deliveries safely          |
-| Respond with 200 quickly          | Prevents unnecessary retries                 |
-| Don't include secrets in payloads | Payload content is visible in delivery logs  |
-| Send identifiers, not raw data    | Keeps sensitive data in your own system      |
+| Practice                              | Why                                             |
+| ------------------------------------- | ----------------------------------------------- |
+| Use HMAC signature verification   | Cryptographically proves delivery is from NotifyKit |
+| Check the timestamp tolerance     | Rejects replayed deliveries after the window    |
+| Use HTTPS                         | Encrypts payload and headers in transit         |
+| Make endpoints idempotent         | Handles duplicate deliveries safely             |
+| Respond with 200 quickly          | Prevents unnecessary retries                    |
+| Don't include secrets in payloads | Payload is stored on the job record until successful delivery |
+| Send identifiers, not raw data    | Keeps sensitive data in your own system         |
 
 ## Next Steps
 

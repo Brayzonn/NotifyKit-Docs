@@ -4,17 +4,26 @@ sidebar_position: 2
 
 # Retry Logic
 
-NotifyKit automatically retries failed webhook deliveries. This page explains how retries work and how to handle failures.
+NotifyKit automatically retries failed jobs. This page explains how retries work for both emails and webhooks.
 
-## Automatic Retries
+## Email Retries
+
+For email jobs, failover and retries are two separate mechanisms:
+
+- **Failover** — when a provider fails, NotifyKit tries the next one in your priority list. This all happens within a single attempt and does not count as a retry.
+- **Retries** — only triggered if every provider in your list fails on a given attempt. The job is retried up to 3 times total, then moved to `failed`.
+
+With forced routing (`provider`/`fallback` fields set), there are no automatic retries — if both the specified provider and fallback fail, the job is permanently failed immediately.
+
+## Webhook Automatic Retries
 
 When a webhook delivery fails, NotifyKit re-queues it with exponential backoff:
 
 | Attempt | Delay before retry |
 | ------- | ------------------ |
 | 1st     | Immediate          |
-| 2nd     | ~2 seconds         |
-| 3rd     | ~4 seconds         |
+| 2nd     | ~2 minutes         |
+| 3rd     | ~4 minutes         |
 
 After 3 failed attempts, the job moves to `failed` status and retries stop.
 
@@ -138,62 +147,39 @@ payment-{paymentId}-receipt
 invoice-{invoiceId}-reminder
 ```
 
-## Designing Your Webhook Endpoint for Reliability
-
-For webhook endpoints that receive NotifyKit deliveries:
-
-1. **Return 2xx quickly** — Process the payload asynchronously. A slow endpoint may time out and trigger a retry.
-2. **Handle duplicates** — Even with idempotency keys, design your endpoint to be idempotent. Store processed event IDs and skip duplicates.
-3. **Return 200 for known bad payloads** — If the payload is malformed but expected, return 200 to prevent retries. Log the issue separately.
-4. **Use HTTPS** — Ensures the payload is encrypted in transit.
 
 ## Handling API Rate Limits
 
-If you exceed the rate limit for an endpoint, the API returns `429 Too Many Requests`:
+If you exceed the rate limit, the API returns `429 Too Many Requests`:
 
 ```json
 {
   "success": false,
-  "error": "Too many requests",
-  "retryAfter": 60,
+  "error": "Rate limit exceeded",
   "timestamp": "2026-03-03T12:00:00.000Z"
 }
 ```
 
-The response also includes a `Retry-After` header with the same value in seconds.
+The response does not include a `retryAfter` field or `Retry-After` header. The rate limit window is 1 minute — wait before retrying.
 
 ### With the SDK
 
-`NotifyKitError` exposes a `retryAfter` property on 429 errors:
-
 ```typescript
-import { NotifyKitError } from 'notifykit-sdk';
+import { NotifyKitError } from '@notifykit/sdk';
 
 try {
   await client.sendEmail({ to: '...', subject: '...', body: '...' });
 } catch (error) {
   if (error instanceof NotifyKitError && error.isStatus(429)) {
-    const wait = error.retryAfter ?? 60;
-    console.log(`Rate limited. Retry in ${wait}s`);
-    await new Promise((resolve) => setTimeout(resolve, wait * 1000));
+    console.log('Rate limited — retry after 60 seconds');
+    await new Promise((resolve) => setTimeout(resolve, 60_000));
     // retry...
   }
 }
 ```
 
-### With the REST API
-
-Read the `Retry-After` response header:
-
-```bash
-HTTP/1.1 429 Too Many Requests
-Retry-After: 60
-```
-
-Wait the indicated number of seconds before retrying the request.
-
 :::info Plan limits
-Rate limits on notification endpoints (`/notifications/*`) are per-plan. If you consistently hit limits, consider upgrading your plan. See [Authentication](/docs/api-reference/authentication) for the full rate limit table.
+Rate limits on notification endpoints are per-plan. If you consistently hit limits, consider upgrading your plan. See [Authentication](/docs/api-reference/authentication) for the full rate limit table.
 :::
 
 ## Next Steps

@@ -14,10 +14,11 @@ POST /api/v1/notifications/webhook
 
 ### Headers
 
-| Header         | Value              | Required |
-| -------------- | ------------------ | -------- |
-| `X-API-Key`    | Your API key       | Yes      |
-| `Content-Type` | `application/json` | Yes      |
+| Header                    | Value              | Required           |
+| ------------------------- | ------------------ | ------------------ |
+| `X-API-Key`               | Your API key       | Yes (or Bearer)    |
+| `Authorization: Bearer`   | Your API key       | Yes (or X-API-Key) |
+| `Content-Type`            | `application/json` | Yes                |
 
 ### Request Body
 
@@ -134,7 +135,7 @@ curl -X POST https://api.notifykit.dev/api/v1/notifications/webhook \
 NotifyKit automatically retries failed webhook deliveries:
 
 - **Max attempts:** 3
-- **Backoff strategy:** Exponential (2s → 4s → 8s between retries)
+- **Backoff strategy:** Exponential (2 min → 4 min between retries)
 - **Success criteria:** Any 2xx HTTP response from your endpoint
 - **Retried on:** 5xx server errors, network failures, connection timeouts
 - **Not retried on:** 4xx client errors (invalid URL, unauthorized, etc.)

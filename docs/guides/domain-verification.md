@@ -13,11 +13,11 @@ Custom domain verification is available on **Indie** and **Startup** plans only.
 :::
 
 :::info Email Provider
-Domain verification registers your domain with each email provider you have configured. To verify a domain, you must have at least one provider API key (SendGrid, Resend, or Postmark) connected in **Settings → API Keys**.
+Domain verification registers your domain with each email provider you have configured. To verify a domain, you must have at least one provider API key connected in **API Keys**.
 :::
 
 :::info Postmark — Account Token Required
-Postmark uses two separate tokens. The **Server Token** is for sending mail; domain operations (create, verify, delete) require an additional **Account Token**. If you've connected Postmark and plan to verify a custom sending domain through it, also paste your Postmark Account Token in **Settings → API Keys → Postmark**. Find it in your Postmark dashboard under **Account → API Tokens**. Without it, NotifyKit will skip Postmark during domain registration.
+Postmark uses two separate tokens. The **Server Token** is for sending mail; domain operations (create, verify, delete) require an additional **Account Token**. If you've connected Postmark and plan to verify a custom sending domain through it, also paste your Postmark Account Token in **API Keys → Postmark**. Find it in your Postmark dashboard under **Account → API Tokens**. Without it, NotifyKit will skip Postmark during domain registration.
 :::
 
 :::warning One Domain Per Account
@@ -28,111 +28,37 @@ You can only verify **one domain** per account at a time. To switch to a differe
 
 NotifyKit registers your domain with every email provider you have configured and generates DNS records for each. Once you add those records to your DNS provider, you trigger verification. When all providers confirm your domain, it becomes active for sending.
 
-If you have multiple providers configured (any combination of SendGrid, Resend, and Postmark), you will receive DNS records from each. All records must be added — NotifyKit delivers through providers in priority order and falls back automatically if one fails.
+If you have multiple providers configured, you will receive DNS records from each. All records must be added — NotifyKit delivers through providers in priority order and falls back automatically if one fails.
 
 ## Step 1: Request Verification
 
-Go to **Settings → Domain** in the NotifyKit dashboard and enter your domain name.
+Go to **Domains** in the NotifyKit dashboard and enter your domain name.
 
-You'll receive CNAME records for each configured provider. For example, with both SendGrid and Resend configured:
-
-**SendGrid records:**
-
-```
-Type: CNAME
-Host: em8724.yourdomain.com
-Value: u12345678.wl123.sendgrid.net
-
-Type: CNAME
-Host: s1._domainkey.yourdomain.com
-Value: s1.domainkey.u12345678.wl123.sendgrid.net
-
-Type: CNAME
-Host: s2._domainkey.yourdomain.com
-Value: s2.domainkey.u12345678.wl123.sendgrid.net
-```
-
-**Resend records:**
-
-```
-Type: CNAME
-Host: resend._domainkey.yourdomain.com
-Value: p.bymail.in
-```
-
-**Postmark records (when an Account Token is configured):**
-
-```
-Type: TXT
-Host: yourdomain.com
-Value: "v=spf1 a mx include:spf.mtasv.net ~all"
-
-Type: TXT
-Host: 20260101pm._domainkey.yourdomain.com
-Value: "k=rsa; p=MIGfMA0GCSqGSIb3DQEBA..."
-
-Type: CNAME
-Host: pm-bounces.yourdomain.com
-Value: pm.mtasv.net
-```
-
-The exact host values for Postmark DKIM/Return-Path will vary — use whatever the dashboard shows.
-
-**What each record does:**
-
-| Record                              | Provider  | Purpose                                      |
-| ----------------------------------- | --------- | -------------------------------------------- |
-| `em####.yourdomain.com`             | SendGrid  | Routes email through SendGrid infrastructure |
-| `s1._domainkey.yourdomain.com`      | SendGrid  | DKIM signature — proves emails are from you  |
-| `s2._domainkey.yourdomain.com`      | SendGrid  | Backup DKIM signature                        |
-| `resend._domainkey.yourdomain.com`  | Resend    | DKIM signature for Resend                    |
-| `yourdomain.com` (TXT)              | Postmark  | SPF — authorizes Postmark to send for you    |
-| `*pm._domainkey.yourdomain.com`     | Postmark  | DKIM signature for Postmark                  |
-| `pm-bounces.yourdomain.com`         | Postmark  | Custom Return-Path for Postmark              |
+NotifyKit registers your domain with every provider you have configured and returns the DNS records required by each. The exact records — their type, host, and value — depend on the provider and are generated at registration time. Copy them directly from the dashboard.
 
 ## Step 2: Add DNS Records
 
-Log in to your DNS provider and add all records shown in the dashboard.
+Log in to your DNS provider and add every record shown in the dashboard. Use the exact **Type**, **Host**, and **Value** from each row — records can be `CNAME` or `TXT` depending on the provider.
 
-### Cloudflare
+A few things to watch out for:
 
-1. Go to **DNS** → **Records**
-2. Click **Add record**
-3. Type: `CNAME`
-4. Name: the `Host` value (e.g., `em8724`)
-5. Target: the `Value`
-6. **Proxy status: DNS only** (gray cloud — do not proxy)
-7. Repeat for all records
-
-### Namecheap
-
-1. Go to **Domain List** → **Manage** → **Advanced DNS**
-2. Click **Add New Record**
-3. Type: `CNAME Record`
-4. Host: the subdomain part only (e.g., `em8724`)
-5. Value: the full target value
-6. TTL: `Automatic`
-
-### Other Providers
-
-Most DNS providers have the same fields under different names (e.g., "Alias", "Destination", "Points to"). Enter the subdomain for the Host field and the full target for the Value field.
+- **Cloudflare:** set Proxy status to **DNS only** (gray cloud). Proxying DNS records will break verification.
+- **Subdomain-only hosts:** some DNS providers expect just the subdomain part (e.g., `em8724`) rather than the full hostname (`em8724.yourdomain.com`). Check your provider's docs if a record fails to save.
+- **Conflicting records:** delete any existing records for the same hostname before adding new ones.
 
 ## Step 3: Verify Domain
 
 DNS propagation typically takes 15–60 minutes, but can take up to 24 hours.
 
-Once you've added all records and waited for propagation, go to **Settings → Domain** and click **Verify Domain**.
+Once you've added all records and waited for propagation, go to **Domains** and click **Verify Domain**.
 
-Your domain is considered verified when **all configured providers** confirm it. If you have multiple providers (SendGrid, Resend, and/or Postmark) connected, every one must pass.
+Your domain is considered verified when **all configured providers** confirm it. Every connected provider must pass.
 
 **Troubleshooting:**
 
 ```bash
-# Check if a CNAME record is visible
-dig em8724.yourdomain.com CNAME
-
-# Expected output:
-# em8724.yourdomain.com. 300 IN CNAME u12345678.wl123.sendgrid.net.
+# Check if a record has propagated (replace with the host shown in the dashboard)
+dig _domainkey.yourdomain.com TXT
 ```
 
 **Common issues:**
@@ -156,13 +82,14 @@ A verified sending domain is required for all paid plan email sends. Requests wi
 
 | Plan            | Domain status | Default sender              |
 | --------------- | ------------- | --------------------------- |
-| Free            | Any           | `noreply@notifykit.dev`     |
 | Indie / Startup | Verified      | `noreply@em.yourdomain.com` |
 | Indie / Startup | Not verified  | Request rejected            |
 
+Free plan emails always send from `noreply@notifykit.dev` — domain verification is not available on the Free plan.
+
 ### Specifying a Custom Sender
 
-Use your verified domain directly in the `from` field — NotifyKit automatically rewrites it to the correct sending subdomain:
+Use your verified domain directly in the `from` field — NotifyKit rewrites it to `em.yourdomain.com` before delivery (e.g. `support@yourdomain.com` becomes `support@em.yourdomain.com`):
 
 ```typescript
 await client.sendEmail({

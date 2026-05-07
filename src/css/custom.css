@@ -90,8 +90,6 @@ html[data-theme="light"] .navbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  max-width: 80rem;
-  margin: 0 auto;
 }
 
 .navbar__title {
@@ -110,6 +108,12 @@ html[data-theme="light"] .navbar {
 
   .navbar-sidebar__brand .navbar__title {
     display: none;
+  }
+
+  /* Brand left, hamburger right */
+  .navbar__brand {
+    order: -1;
+    flex: 1;
   }
 }
 
@@ -247,6 +251,7 @@ table {
   border-radius: 0.6rem;
   overflow: hidden;
   border: 1px solid var(--nk-border);
+  width: fit-content;
 }
 
 table thead {
