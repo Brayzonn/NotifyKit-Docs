@@ -8,6 +8,33 @@ All notable changes to the NotifyKit API and platform.
 
 ---
 
+## 2026-05-11
+
+### Reliable platform email delivery
+
+Transactional emails sent by NotifyKit itself — OTP codes, password resets, email verification links, and billing receipts — are now queued through BullMQ with exponential backoff and multi-provider fallback.
+
+**What changed:**
+
+- Platform emails are enqueued at critical priority and retried up to 3 times with exponential backoff (15 s base delay) before being marked as failed.
+- Providers are tried in priority order — **Resend → SendGrid → Postmark** — based on which keys are configured. If Resend is unavailable, SendGrid is tried automatically, and so on. No configuration needed.
+- On final failure, an alert fires to a configured Slack channel so the team is notified immediately.
+
+This means a transient provider outage (like an expired SendGrid key) no longer causes a `Failed to send verification email` error for your users — the request is retried through the next available provider.
+
+### Admin: restore and permanently delete users
+
+Two new admin endpoints for managing soft-deleted users:
+
+| Method | Endpoint | Description |
+| ------ | -------- | ----------- |
+| `POST` | `/api/v1/admin/users/:id/restore` | Restore a soft-deleted user, allowing them to sign in again |
+| `DELETE` | `/api/v1/admin/users/:id/permanent` | Hard-delete a user and all associated data — irreversible |
+
+Both are available in the admin dashboard under **Users**. Deleted users show a restore button and a permanent delete button. Permanently deleting a user removes their account, customer record, jobs, and all associated data from the database.
+
+---
+
 ## 2026-05-07
 
 ### Webhook HMAC signing
