@@ -44,13 +44,48 @@ The `X-Webhook-Signature` header has the format `t=<timestamp>,v1=<hex signature
 
 ### Verify at Your Endpoint
 
+#### Using the SDK (recommended)
+
+The `@notifykit/sdk` package exports a `verifyWebhookSignature` helper that handles parsing, timing-safe comparison, and replay protection for you.
+
+```typescript
+import express from "express";
+import { verifyWebhookSignature } from "@notifykit/sdk";
+
+const app = express();
+
+// Raw body parser — required so the string is available before JSON parsing
+app.use("/webhooks", express.raw({ type: "application/json" }));
+
+app.post("/webhooks/orders", (req, res) => {
+  const valid = verifyWebhookSignature({
+    payload: req.body.toString("utf8"),                        // raw string
+    timestamp: req.headers["x-webhook-timestamp"] as string,
+    signature: req.headers["x-webhook-signature"] as string,
+    secret: process.env.NOTIFYKIT_WEBHOOK_SECRET!,
+    tolerance: 300,                                            // optional, default 300s
+  });
+
+  if (!valid) return res.status(401).json({ error: "Invalid signature" });
+
+  const event = JSON.parse(req.body.toString("utf8"));
+  console.log("Verified delivery:", event);
+  res.status(200).json({ received: true });
+});
+```
+
+`verifyWebhookSignature` returns `false` (never throws) on any failure — missing headers, malformed signature, timestamp outside the tolerance window, or digest mismatch.
+
+Available since `@notifykit/sdk@1.3.0`.
+
+#### Manual implementation (without the SDK)
+
 ```typescript
 import express from "express";
 import * as crypto from "crypto";
 
 const app = express();
 
-// Raw body parser — required so the body string is available for signature verification
 app.use("/webhooks", express.raw({ type: "application/json" }));
 
 app.post("/webhooks/orders", (req, res) => {

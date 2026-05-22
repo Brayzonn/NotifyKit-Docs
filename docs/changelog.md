@@ -8,6 +8,29 @@ All notable changes to the NotifyKit API and platform.
 
 ---
 
+## 2026-05-22
+
+### SDK 1.3.0 — `verifyWebhookSignature`
+
+`@notifykit/sdk@1.3.0` adds a built-in helper for verifying webhook signatures, so you no longer need to implement the HMAC verification manually.
+
+```typescript
+import { verifyWebhookSignature } from "@notifykit/sdk";
+
+const valid = verifyWebhookSignature({
+  payload: req.rawBody,
+  timestamp: req.headers["x-webhook-timestamp"],
+  signature: req.headers["x-webhook-signature"],
+  secret: process.env.NOTIFYKIT_WEBHOOK_SECRET!,
+});
+```
+
+The helper handles signature parsing, constant-time comparison, and replay protection (5-minute tolerance window by default). It returns `false` on any failure and never throws.
+
+See [Webhook Security](/docs/guides/webhook-security) for the full setup guide and [TypeScript SDK](/docs/sdk/typescript) for the full API reference.
+
+---
+
 ## 2026-05-11
 
 ### Reliable platform email delivery

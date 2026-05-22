@@ -297,6 +297,56 @@ Only jobs with `failed` status can be retried. `pending`, `processing`, and `com
 
 ---
 
+### `verifyWebhookSignature(options)`
+
+Verify an incoming webhook delivery signed by NotifyKit. Call this at your receiving endpoint before processing the payload.
+
+**Parameters:**
+
+```typescript
+interface VerifyWebhookSignatureOptions {
+  payload: string;     // Raw request body as a string — do NOT pass a parsed object
+  timestamp: string;   // Value of the X-Webhook-Timestamp header
+  signature: string;   // Value of the X-Webhook-Signature header (t=<ts>,v1=<hex>)
+  secret: string;      // Plaintext webhook signing secret from your dashboard
+  tolerance?: number;  // Max request age in seconds before rejection (default: 300)
+}
+```
+
+**Returns:** `boolean` — `true` if the signature is valid and within the tolerance window, `false` otherwise. Never throws.
+
+**Example:**
+
+```typescript
+import { verifyWebhookSignature } from "@notifykit/sdk";
+
+app.post("/webhooks/notifykit", (req, res) => {
+  const valid = verifyWebhookSignature({
+    payload: req.rawBody,
+    timestamp: req.headers["x-webhook-timestamp"],
+    signature: req.headers["x-webhook-signature"],
+    secret: process.env.NOTIFYKIT_WEBHOOK_SECRET!,
+  });
+
+  if (!valid) return res.status(401).send("Invalid signature");
+
+  // safe to process
+  res.sendStatus(200);
+});
+```
+
+:::warning Raw body required
+Pass the **raw request body string** — not the parsed JSON object. Re-serializing a parsed object can produce a different byte sequence and will cause verification to fail. Use `express.raw({ type: "application/json" })` on your webhook route.
+:::
+
+:::info
+`verifyWebhookSignature` is a standalone export — it does not require an initialized `NotifyKitClient`. Available since `@notifykit/sdk@1.3.0`.
+
+See [Webhook Security](/docs/guides/webhook-security) for the full setup guide.
+:::
+
+---
+
 ### `ping()`
 
 Test API connectivity.
@@ -413,6 +463,7 @@ import type {
   RetryJobResponse,
   PaginationMeta,
   ApiInfo,
+  VerifyWebhookSignatureOptions,
 } from "@notifykit/sdk";
 ```
 
