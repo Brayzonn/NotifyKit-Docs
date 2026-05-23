@@ -35,8 +35,8 @@ NotifyKit handles all of that behind a clean API. You make one call; NotifyKit q
 | Plan    | Price     | Monthly Limit     | Emails                                 |
 | ------- | --------- | ----------------- | -------------------------------------- |
 | Free    | $0        | 100 notifications | Shared with webhook quota              |
-| Indie   | $9/month  | 4,000 webhooks    | Unlimited (via your own provider keys) |
-| Startup | $30/month | 15,000 webhooks   | Unlimited (via your own provider keys) |
+| Indie   | $5/month  | 4,000 webhooks    | Unlimited (via your own provider keys) |
+| Startup | $10/month | 15,000 webhooks   | Unlimited (via your own provider keys) |
 
 On the Free plan, every notification (email or webhook) counts toward a single 100/month limit. On paid plans, emails are unlimited and only webhooks count toward the monthly quota.
 
